@@ -125,23 +125,23 @@ sudo apt install libnotify-bin
 ```
 
 
-### Talking
+## Talking
 
-Tiki Calendar is not meant to be a talking calendar. See my [Talk Calendar](https://github.com/crispinalan/talkcalendar) project for a talking calendar). However, it does have some limited speech capability for reading out the dates and speech tags. Ensure that the talk directory containing speech wav files is located in the current working directory.
+Tiki Calendar is not meant to be a talking calendar. See my [Talk Calendar](https://github.com/crispinalan/talkcalendar) project for a talking calendar. However, it does have some limited speech capability for reading out the dates and speech tags. Ensure that the talk directory containing speech wav files is located in the current working directory.
 
 * Enable talking in Talk Options
 * Click on a calendar date with events
 * Press the spacebar to speak or use the speak menu item to read out selected event details.
 * Enable "Talk At Startup" in Talk Options to read out the date for the current day when the calendar is started
 
-## Talk Options
+### Talk Options
 
 * Use the Talk Options dialog in the hamburger menu to choose what you want to speak.
 
 ![](talk-options.png)
 
 
-## Speech Tags
+### Speech Tags
 
 A speech tag is a keyword (e.g. birthday) which if added into the title text is read out by Tiki Calendar to give an indication of the type of event.
 
@@ -208,11 +208,7 @@ The GNOME project uses a library called libadwaita which is like a GNOME specifi
 
 ## License
 
-GNU General Public Licence, Version 3.
-
-## License Note
-
-The Gtk4.0 GUI toolkit is licensed using LGPLv2.1.  Consequently, Tiki Calendar has been licensed using the GNU  General Public License.
+The Gtk4.0 GUI toolkit is licensed using LGPLv2.1.  Consequently, Tiki Calendar has been licensed using the GNU  General Public License version 2.
 
 
 ## Acknowledgements
