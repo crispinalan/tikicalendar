@@ -1799,6 +1799,9 @@ char* result="";
 
 
 	 //n words
+	 if (g_strcmp0(word,"new")==0) {
+	 result="talk/n/new.wav";
+	 }
 
 	 if (g_strcmp0(word,"note")==0) {
 	 result="talk/n/note.wav";
@@ -1815,6 +1818,10 @@ char* result="";
 
 	 if (g_strcmp0(word,"priority")==0) {
 	 result="talk/p/priority.wav";
+	 }
+
+	  if (g_strcmp0(word,"public")==0) {
+	 result="talk/p/public.wav";
 	 }
 
 	 //q words
@@ -3216,8 +3223,8 @@ static void callbk_about(GSimpleAction * action, GVariant *parameter, gpointer u
 	gtk_window_set_transient_for(GTK_WINDOW(about_dialog),GTK_WINDOW(window));
 	gtk_widget_set_size_request(about_dialog, 200,200);
     gtk_window_set_modal(GTK_WINDOW(about_dialog),TRUE);	
-	gtk_about_dialog_set_program_name(GTK_ABOUT_DIALOG(about_dialog), "Tiki Calendar");
-	gtk_about_dialog_set_version (GTK_ABOUT_DIALOG(about_dialog), "Gtk4 Version 0.1.0");
+	gtk_about_dialog_set_program_name(GTK_ABOUT_DIALOG(about_dialog), "Tiki Calendar (Gtk4 version)");
+	gtk_about_dialog_set_version (GTK_ABOUT_DIALOG(about_dialog), "Version 0.1.1");
 	gtk_about_dialog_set_copyright(GTK_ABOUT_DIALOG(about_dialog),"Copyright © 2023");
 	gtk_about_dialog_set_comments(GTK_ABOUT_DIALOG(about_dialog),"Personal calendar"); 
 	gtk_about_dialog_set_license_type (GTK_ABOUT_DIALOG(about_dialog), GTK_LICENSE_GPL_2_0);

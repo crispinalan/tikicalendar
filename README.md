@@ -7,7 +7,7 @@ Tiki Calendar is a Linux personal desktop calendar developed using C and [Gtk4](
 
 ## Core Features
 
-* built with Gtk4.0
+* built with Gtk4.6
 * event title, location, type, start and end time can be entered and edited
 * bespoke month calendar which allows days with events to be colour marked
 * priority events can be separately colour marked*
@@ -20,7 +20,7 @@ Tiki Calendar is a Linux personal desktop calendar developed using C and [Gtk4](
 
 ### Prebuilt Binary
 
-A 64 bit prebuilt binary is available and can be downloaded from [binary](https://github.com/crispinalan/tikicalendar/tree/main/binary) and can be used with Linux distributions that have Gtk4 in their repositories such as Fedora 35, Ubuntu 22.04 and Debian Bookworm (in testing) etc.
+A 64 bit prebuilt binary is available and can be downloaded from [binary](https://github.com/crispinalan/tikicalendar/tree/main/binary) and can be used with Linux distributions that have Gtk4 in their repositories such as Fedora 35 onwards, Ubuntu 22.04 and Debian Bookworm (in testing) etc.
 
 Assuming that the Gtk4 base libraries are installed the Tiki Calendar binary can be run from the terminal using:
 
@@ -125,7 +125,7 @@ sudo apt install libnotify-bin
 ```
 
 
-## Talking
+## Speech
 
 Tiki Calendar is not meant to be a talking calendar. See my [Talk Calendar](https://github.com/crispinalan/talkcalendar) project for a talking calendar. However, it does have some limited speech capability for reading out the dates and speech tags. Ensure that the talk directory containing speech wav files is located in the current working directory.
 
@@ -195,7 +195,84 @@ The first iteration of the Tiki Calendar project used Gtk3 but then migrated to 
 
 I developed this calendar application to learn Gtk as at the time I was concerned that Qt may become closed source when the Qt Company announced that the Qt LTS versions and the offline installer were to become commercial-only [Qt licensing changes](https://www.qt.io/blog/qt-offering-changes-2020).  However, this proved not to be the case. Infact the Qt Company have released Qt 5.15.6 as [open-source](https://www.phoronix.com/news/Qt-5.15.6-LTS-Open-Source). Consequently, I continued developing my main Qt calendar application called [Talk Calendar](https://github.com/crispinalan/talkcalendar). This project is a Gtk4 Calendar and to avoid any confusion with my Qt Talk Calendar project I have called it Tiki Calendar. Tiki is an acronym for Tightly Integrated Knowledge Infrastructure. Tiki Calendar does have some limited speech capability using a local directory of speech files but is not indended to be a talking calendar. The idea was to have date reader on startup but I added a few more speech features such as tags.
 
-The GNOME project uses a library called libadwaita which I believe is like a companion library for Gtk4 as you have to include both the libadwaita and Gtk libraries in a GNOME project. I think of libadwaita as a library that provides new widgets that sit on top of Gtk and so you do not have to use it. Libadwaita incorporates things like built-in styles for buttons and other widgets to take complete control of the look and feel of applications. It also adds things like notifications and animations. I have avoided using libadwaita keeping this a Gtk4 only project. A simple notification system has been implemented using libnotify in this project.
+
+
+## Gtk4 Depreciations
+
+I have been using GTk4.6.6 for developing Tiki Calendar. To determine the version of Gtk4 running on a Linux system use the following terminal command.
+
+```
+dpkg -l | grep libgtk
+```
+
+Gtk have announced on their [Gtk4 api website](https://docs.gtk.org/gtk4/) that the following classes
+
+```
+AppChooserButton, AppChooserDialog, AppChooserWidget,
+CellArea,CellAreaBox, CellAreaContext, CellRenderer, CellRendererAccel, CellRendererCombo, CellRendererPixbuf, CellRendererProgress, CellRendererSpin, CellRendererSpinner, CellRendererText, CellRendererToggle,
+ColorButton, ColorChooserDialog, ColorChooserWidget,
+ComboBox, ComboBoxText,
+Dialog,
+EntryCompletion,
+FileChooserDialog,FileChooserNative, FileChooserWidget,
+IconView,
+ListStore, LockButton,
+MessageDialog,
+Statusbar, StyleContext
+TreeModelFilter,TreeModelSort, TreeSelection, TreeStore, TreeView, TreeViewColumn,
+VolumeButton
+```
+
+are being deprecated in Gtk4 version 4.10 onwards.
+
+I was aware that it was the intention of Gtk developers to eventually replace GtkTreeView and GtkComboBox with [list widgets](https://blog.gtk.org/2020/06/08/more-on-lists-in-gtk-4/) and so I did not use these classes in the development of this calendar. See my migration notes below.
+
+However, I was not aware that ColorChooser was being depreciated which includes functions such as "gtk_color_chooser_get_rgba()" which is used to allow the calendar user to select different colours for days with events, days with priority events and the today colour. I will have to give some thought on how to rewrite this code.
+
+The other depreciation which will affect this project is the ListStore class as I have used functions like gtk_list_store_new() which is going to be depreciated. I am assuming that you have to now use [Gio ListStore](https://docs.gtk.org/gio/ctor.ListStore.new.html).
+
+The removal of MessageDialog will also require the code base to be changed as the function gtk_message_dialog_new() is being depreciated.
+
+The current Tiki Calendar code base will need a major rewrite with this number of depreciations in Gtk4 version 4.10 onwards.
+
+
+## My Gtk3 to Gtk4 Migration Notes
+
+These notes may be of help if your are migrating a C Gtk3 project to Gtk4.
+
+Gtk4 uses [list widgets](https://docs.gtk.org/gtk4/migrating-3to4.html#consider-porting-to-the-new-list-widgets) such as GtkListBox and porting the Gtk3 version of this Calendar project has involved replacing the display of events with a GtkListBox. A significant effort had to be invested into this aspect of the porting. There is an article on scalable lists in gtk4 [here](https://blog.gtk.org/2020/06/07/scalable-lists-in-gtk-4/).
+
+Gtk have said [publically](https://www.youtube.com/watch?v=qjF-VotgfeY&t=824s) that it is their intention to eventually replace GtkTreeView and GtkComboBox with [list widgets](https://blog.gtk.org/2020/06/08/more-on-lists-in-gtk-4/). The GtkListBox widget provides a vertical list and can be sorted (in this application events are sorted by start time and then displayed). The application work flow has had to be changed as headerbar buttons are now used to create a new event, edit and delete a selected event in the list. I have used buttons with text labels (New, Edit, Delete) but there is now an option for using Adwaita button icons (subject to change).
+
+In Gtk4.0, the function
+
+```
+gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
+```
+
+has been depreciated and so has had to be removed from the code. See this [discussion](https://discourse.gnome.org/t/how-to-center-gtkwindows-in-gtk4/3112).
+
+In Gtk4, the function
+
+```
+gtk_dialog_run()
+```
+
+has been depreciated. This has been less of an issue as callback functions have been written for the “response” events. See this [discussion](https://discourse.gnome.org/t/how-should-i-replace-a-gtk-dialog-run-in-gtk-4/3501).
+
+I could not place a visual marker on a particular GtkCalendar day using the "gtk_calendar_mark_day()" function. The [GtkInspector](https://wiki.gnome.org/action/show/Projects/GTK/Inspector?action=show&redirect=Projects%2FGTK%2B%2FInspector) debugging tool does not reveal any obvious CSS style theme option that should to be used to do this. Consequently, I have ended up writing a bespoke month calendar which allows days with events to be colour marked.
+
+The calendar has been developed using the Gtk4 grid layout [manager](https://docs.gtk.org/gtk4/class.Grid.html) which arranges child widgets in rows and columns. In this case the layout manager arranges buttons in a grid. Again a significant effort has had to be invested in this aspect of the porting.
+
+The function "gtk_spin_button_set_text()" has gone. The documented approach for showing spin button [leading zeros](https://people.gnome.org/~ebassi/docs/_build/Gtk/4.0/signal.SpinButton.output.html) doesn't work with gtk4. Consequently, I have had to change the new and edit event dialogs. The spin boxes for the start and end times now accept floating point values which are now stored in the database as floating point values. I have also removed the priority combobox as comboboxes are on the Gtk depreciation hit list (see list widget discussion above) and replaced it with a high prirority check button.
+
+Other depreciations include "gtk_application_set_app_menu()" as discussed [here](https://wiki.gnome.org/HowDoI/ApplicationMenu). The function "gtk_button_set_image()" has gone. In the context of menu development it can be replaced with "gtk_menu_button_set_icon_name()".
+
+## Libadwaita
+
+The GNOME project uses a library called libadwaita which I believe is like a companion library for Gtk4 as you have to include both the libadwaita and Gtk libraries in a GNOME project. From what I can make out, libadwaita is a Gtk4 library for implementing the GNOME Human Interface Guidelines using the [Adwaita](https://en.wikipedia.org/wiki/Adwaita_(design_language)) design language. So Gtk4 gives you widgets like buttons, spin boxes, and text fields while libadwaita provides styling and behaviour for these widgets.  It also adds things like notifications and animations.
+
+I have avoided using libadwaita keeping this a Gtk4 only project. A simple notification system has been implemented using libnotify in this project.
 
 ## Versioning
 
