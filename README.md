@@ -127,12 +127,12 @@ sudo apt install libnotify-bin
 
 ## Speech
 
-Tiki Calendar is not meant to be a talking calendar. See my [Talk Calendar](https://github.com/crispinalan/talkcalendar) project for a talking calendar. However, it does have some limited speech capability for reading out the dates and speech tags. Ensure that the talk directory containing speech wav files is located in the current working directory.
+Tiki Calendar is not meant to be a talking calendar. See my [Talk Calendar](https://github.com/crispinalan/talkcalendar) Qt project for a talking calendar. However, it does have some limited speech capability for reading out the dates and speech tags. Ensure that the talk directory containing speech wav files is located in the current working directory.
 
 * Enable talking in Talk Options
 * Click on a calendar date with events
-* Press the spacebar to speak or use the speak menu item to read out selected event details.
-* Enable "Talk At Startup" in Talk Options to read out the date for the current day when the calendar is started
+* Press the spacebar to read out the selected date, event number, event times and any speech tags if used
+* Enable "Talk At Startup" in the Talk Options to read out the date for the current day and other details when the calendar is started
 
 ### Talk Options
 
@@ -157,15 +157,15 @@ The following tag words have been implemented relating to personal events
     halloween, holiday, hospital,
     important, information,
     meal, medical, meeting,
-    note,
-    party, payment, priority
+    new, note,
+    party, payment, priority, public
     reminder, restaurant,
     travel,
     valentine, visit,
     wedding,
     year
 ```
-Event speech tagging can be effective for a quick audio overview of day events. If no speech tag is recognised then nothing is read out.
+Event speech tagging can be effective for a quick audio overview of day events. You can combine speech tags. Examples include  "public holiday", "christmas day", "new year", "doctor appointment", "payment reminder" etc. If no speech tag is recognised then nothing is read out.
 
 ### Help
 
@@ -183,7 +183,7 @@ Today		Home Key
 
 ## Startup Applications
 
-Add Tiki Calendar to your start-up programs to read out events when the computer is switched on.
+Add Tiki Calendar to your start-up programs to read out the date and any event details when the computer is switched on.
 
 With the GNOME desktop use the GNOME "Tweak Tool" to add Tiki Calendar to your startup applications if required.
 
@@ -227,13 +227,16 @@ are being deprecated in Gtk4 version 4.10 onwards.
 
 I was aware that it was the intention of Gtk developers to eventually replace GtkTreeView and GtkComboBox with [list widgets](https://blog.gtk.org/2020/06/08/more-on-lists-in-gtk-4/) and so I did not use these classes in the development of this calendar. See my migration notes below.
 
-However, I was not aware that ColorChooser was being depreciated which includes functions such as "gtk_color_chooser_get_rgba()" which is used to allow the calendar user to select different colours for days with events, days with priority events and the today colour. I will have to give some thought on how to rewrite this code.
+However, I was not aware that ColorButton, ColorChooserDialog were being depreciated as I use functions such as [gtk_color_chooser_get_rgba](https://docs.gtk.org/gtk4/method.ColorChooser.get_rgba.html) labelled "depreciated 4.10". I use this to allow the calendar user to select different colours for days with events, days with priority events and the today colour. I will have to give some thought on how to rewrite this code as other classes such as [GtkColorDialog](https://docs.gtk.org/gtk4/class.ColorDialog.html) are labeled "unstable since: 4.10".
 
-The other depreciation which will affect this project is the ListStore class as I have used functions like gtk_list_store_new() which is going to be depreciated. I am assuming that you have to now use [Gio ListStore](https://docs.gtk.org/gio/ctor.ListStore.new.html).
+The ListStore class is going to be depreciated in Gtk4.10 and I am assuming that you now have to use [Gio ListStore](https://docs.gtk.org/gio/ctor.ListStore.new.html). This means functions such as [gtk_list_store_new()](https://docs.gtk.org/gtk4/ctor.ListStore.new.html) used to creates a new list store are labeled "deprecated: 4.10". Fortunately, I have used GListStore in this calendar project creating a new GListStore with [g_list_store_new](https://docs.gtk.org/gio/ctor.ListStore.new.html).
 
-The removal of MessageDialog will also require the code base to be changed as the function gtk_message_dialog_new() is being depreciated.
 
-The current Tiki Calendar code base will need a major rewrite with this number of depreciations in Gtk4 version 4.10 onwards.
+The removal of MessageDialog will also require the code base to be changed as the function [gtk_message_dialog_new](https://docs.gtk.org/gtk4/ctor.MessageDialog.new.html) is being depreciated. I am assuming that you have to use [GtkAlertDialog](https://docs.gtk.org/gtk4/class.AlertDialog.html) instead but this is also labelled "unstable since: 4.10".
+
+The current Tiki Calendar code base will need a major overhall to deal with the Gtk4.10 depreciations.
+
+GTK developers are planning the [Gtk5](https://www.phoronix.com/news/GTK5-Likely-After-GTK-4.12) toolkit discussing making it a Wayland only [release](https://www.phoronix.com/news/GTK5-Might-Drop-X11).
 
 
 ## My Gtk3 to Gtk4 Migration Notes
@@ -270,7 +273,7 @@ Other depreciations include "gtk_application_set_app_menu()" as discussed [here]
 
 ## Libadwaita
 
-The GNOME project uses a library called libadwaita which I believe is like a companion library for Gtk4 as you have to include both the libadwaita and Gtk libraries in a GNOME project. From what I can make out, libadwaita is a Gtk4 library for implementing the GNOME Human Interface Guidelines using the [Adwaita](https://en.wikipedia.org/wiki/Adwaita_(design_language)) design language. So Gtk4 gives you widgets like buttons, spin boxes, and text fields while libadwaita provides styling and behaviour for these widgets.  It also adds things like notifications and animations.
+The GNOME project uses a library called libadwaita which I believe is like a companion library for Gtk4 as you have to include both the libadwaita and Gtk libraries in a GNOME project. From what I can make out, libadwaita is a Gtk4 library for implementing the GNOME Human Interface Guidelines using the [Adwaita](https://en.wikipedia.org/wiki/Adwaita_(design_language)) design language. So if I undertand things correctly, Gtk4 is used for UI elements (e.g. buttons, text entry widgets) and layout managers while libadwaita provides GNOME styling and behaviour for these widgets.  It also adds things like notifications and animations.
 
 I have avoided using libadwaita keeping this a Gtk4 only project. A simple notification system has been implemented using libnotify in this project.
 
