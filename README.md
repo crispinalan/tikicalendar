@@ -226,7 +226,7 @@ The Gtk ListStore class is going to be depreciated in Gtk4.10 and I am assuming 
 
 Removing MessageDialog means that the function [gtk_message_dialog_new](https://docs.gtk.org/gtk4/ctor.MessageDialog.new.html) is being depreciated which was used in used Tiki Calendar v0.1.x to alert users when deleting events but I have now removed it.
 
-The gtk_dialog_new_with_buttons() function is being depreciated and so the only other way I can see to create a dialog is to use gtk_window_new(). All of the dialogs have now been changed to use this in the Tiki Calendar 0.2.x series.
+The [gtk_dialog_new_with_buttons()](https://docs.gtk.org/gtk4/ctor.Dialog.new_with_buttons.html) function is being depreciated and so the only other way I can see to create a dialog is to use [gtk_window_new](https://docs.gtk.org/gtk4/ctor.Window.new.html). All of the dialogs have now been changed to use gtk_window_new in the Tiki Calendar 0.2.x series.
 
 GTK developers are planning the [Gtk5](https://www.phoronix.com/news/GTK5-Likely-After-GTK-4.12) toolkit discussing making it a Wayland only [release](https://www.phoronix.com/news/GTK5-Might-Drop-X11).
 
