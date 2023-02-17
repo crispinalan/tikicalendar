@@ -31,12 +31,11 @@
 #include <gtk/gtk.h>
 #include <glib/gstdio.h>  //needed for g_mkdir
 #include <math.h>  //compile with -lm
-//#include "wavplay.h"
 #include "wavcat.h"
 
 
-#define CONFIG_DIRNAME "talkcal-gtk"
-#define CONFIG_FILENAME "talkcal-gtk-config-1-3"
+#define CONFIG_DIRNAME "tikical-gtk4"
+#define CONFIG_FILENAME "tikical-gtk-config-020"
 
 static GMutex lock;
 
@@ -59,47 +58,36 @@ GDate* calculate_easter(gint year);
 gboolean check_day_events_for_overlap();
 
 
-
-
 //Event Dialogs
 static void callbk_check_button_allday_toggled (GtkCheckButton *check_button, gpointer user_data);
-static void callbk_new_event_response(GtkDialog *dialog, gint response_id,  gpointer  user_data);
+static void callbk_add(GtkButton *button, gpointer  user_data);
 static void callbk_new_event(GtkButton *button, gpointer  user_data);
-void callbk_edit_event_response(GtkDialog *dialog, gint response_id,  gpointer  user_data);
+static void callbk_update(GtkButton *button, gpointer  user_data);
 static void callbk_edit_event(GtkButton *button, gpointer  user_data);
 
 //Actions
 
 static void speak_events();
 static void callbk_speak(GSimpleAction* action, GVariant *parameter,gpointer user_data);
-//static void callbk_speak_about(GSimpleAction* action,G_GNUC_UNUSED  GVariant *parameter,gpointer user_data);
 static void callbk_about(GSimpleAction* action, GVariant *parameter, gpointer user_data);
 static void callbk_home(GSimpleAction* action, GVariant *parameter, gpointer user_data);
 static void callbk_delete(GSimpleAction* action, GVariant *parameter,  gpointer user_data);
 static void callbk_quit(GSimpleAction* action,G_GNUC_UNUSED GVariant *parameter, gpointer user_data);
 static void callbk_delete_selected(GtkButton *button, gpointer  user_data);
 
-static void set_today_button_colour(GtkButton *button);
-static void set_event_button_colour(GtkButton *button);
-static void set_holiday_button_colour(GtkButton *button);
 
 void save_csv_file(); //need a new approach
 void load_csv_file();
 void reload_csv_file();
 int file_exists(const char *file_name);
 
-
-//notifications
-static void show_notification(gchar *message); 
-
 //config
 static char * m_config_file = NULL;
 
-static int m_font_size=20;
-static int m_holidays=0; //show holidays
+static int m_holidays=0; //holidays to do
 static int m_show_end_time=0; //show end_time
-static int m_startup_notification=0;
-static int m_use_adwaita_icons=0;
+//static int m_startup_notification=0;
+
 
 static int m_talk =1;
 static int m_talk_at_startup =1;
@@ -110,54 +98,19 @@ static int m_talk_overlap=0; //to do
 static int m_talk_priority=0; //to do
 static int m_talk_reset=0;
 
-static int m_speed = 160; //espeak words per minute
+static int m_frame =0; // grid button frames
 
-static int m_frame =0; //force buttons to have no frame
-
-//calendar config
-static float m_today_red =0.0;
-static float m_today_green =0.0;
-static float m_today_blue =0.0;
-static float m_today_bg_red =0.59;
-static float m_today_bg_green =0.98;
-static float m_today_bg_blue =0.59;
-static int m_today_frame =1;
-
-static float m_event_red =0.0;
-static float m_event_green =0.0;
-static float m_event_blue =0.0;
-static float m_event_bg_red =1.0;
-static float m_event_bg_green =0.8;
-static float m_event_bg_blue =0.8;
-static int m_event_frame =1;
-
-static float m_holiday_red =0.0;
-static float m_holiday_green =0.0;
-static float m_holiday_blue =0.0;
-static float m_holiday_bg_red =1.0;
-static float m_holiday_bg_green =1.0;
-static float m_holiday_bg_blue =0.7;
-static int m_holiday_frame =1;
-
-
-static float m_priority_red =0.0;
-static float m_priority_green =0.0;
-static float m_priority_blue =0.0;
-static float m_priority_bg_red =1.0;
-static float m_priority_bg_green =0.0;
-static float m_priority_bg_blue =0.4;
-static int m_priority_frame =1;
-
-static int m_colour_reset =0;
 
 static int m_today_year=0;
 static int m_today_month=0;
 static int m_today_day=0;
 
 static int m_row_index=-1; //selection index
-static const char* m_title ="title";
+
+//todo: write a Gobject calendar event class
+static const char* m_summary ="title";
 static const char* m_location ="";
-static const char* m_type ="general";
+static const char* m_description ="todo";
 static int m_year=0;
 static int m_month=0;
 static int m_day=0;
@@ -171,11 +124,12 @@ static GListStore *m_store;
 
 static int m_id_selection=-1;
 
+//todo: write a Gobject calendar event class
 typedef struct {
 	int id;	
-	char title[101];
+	char summary[101];
 	char location[101];
-	char type[101];
+	char description[101];
 	int year;
 	int month;
 	int day;
@@ -187,9 +141,9 @@ typedef struct {
 } Event;
 
 int max_records=5000;
-Event *db_store=NULL; 
+Event *event_store=NULL;
 
-int m_db_size=0;
+int m_store_size=0;
 int marked_date[31]; //month days with events
 int priority_date[31]; //month days with high priority
 int num_marked_dates = 0;
@@ -238,54 +192,16 @@ static GType display_object_get_type (void);
 //------------------------------------------------------------------
 static void config_load_default()
 {		
-	
 	m_talk=1;
 	m_talk_at_startup=1;
 	m_talk_event_number=1;	
 	m_talk_time=1;
 	m_talk_tags=1;
-	m_talk_priority=0;	
-	m_talk_overlap=0;
-		
-	m_startup_notification=0;
-	m_font_size=20; 	
-	m_holidays=0;
-	m_show_end_time=0;	
-	m_use_adwaita_icons=0;	
-	
-	m_today_red =0.0;
-	m_today_green =0.0;
-	m_today_blue =0.0;
-	m_today_bg_red =0.59;
-	m_today_bg_green =0.98;
-	m_today_bg_blue =0.59;
-	m_today_frame =1;
-	
-	m_event_red =0.0;
-	m_event_green =0.0;
-	m_event_blue =0.0;
-	m_event_bg_red =1.0;
-	m_event_bg_green =0.8;
-	m_event_bg_blue =0.8;
-	m_event_frame =1;
-	
-	m_holiday_red =0.0;
-	m_holiday_green =0.0;
-	m_holiday_blue =0.0;
-	m_holiday_bg_red =1.0;
-	m_holiday_bg_green =1.0;
-	m_holiday_bg_blue =0.7;
-	m_holiday_frame =1;
-	
-	m_priority_red =0.0;
-	m_priority_green =0.0;
-	m_priority_blue =0.0;
-	m_priority_bg_red =1.0;
-	m_priority_bg_green =0.0;
-	m_priority_bg_blue =0.4;
-	m_priority_frame =1;
-	
-	m_colour_reset =0; 
+	m_talk_priority=0;	//todo
+	m_talk_overlap=0; //todo
+	m_holidays=0; //todo
+	m_frame=0;
+	m_show_end_time=0;
 }
 
 static void config_read()
@@ -298,47 +214,10 @@ static void config_read()
 	m_talk_tags=1;
 	m_talk_priority=0;	
 	m_talk_overlap=0;
-	
-	m_startup_notification=0;
-	m_font_size=20; 	
 	m_holidays=0;
+	m_frame=0;
 	m_show_end_time=0;	
-	m_use_adwaita_icons=0;		
-	
-	m_today_red =0.0;
-	m_today_green =0.0;
-	m_today_blue =0.0;
-	m_today_bg_red =0.59;
-	m_today_bg_green =0.98;
-	m_today_bg_blue =0.59;
-	m_today_frame =1;
-	
-	m_event_red =0.0;
-	m_event_green =0.0;
-	m_event_blue =0.0;
-	m_event_bg_red =1.0;
-	m_event_bg_green =0.8;
-	m_event_bg_blue =0.8;
-	m_event_frame =1;
-	
-	m_holiday_red =0.0;
-	m_holiday_green =0.0;
-	m_holiday_blue =0.0;
-	m_holiday_bg_red =1.0;
-	m_holiday_bg_green =1.0;
-	m_holiday_bg_blue =0.7;
-	m_holiday_frame =1;
-	
-	m_priority_red =0.0;
-	m_priority_green =0.0;
-	m_priority_blue =0.0;
-	m_priority_bg_red =1.0;
-	m_priority_bg_green =0.0;
-	m_priority_bg_blue =0.4;
-	m_priority_frame =1;
-	
-	m_colour_reset =0; 
-	
+
 	// Load keys from keyfile
 	GKeyFile * kf = g_key_file_new();
 	g_key_file_load_from_file(kf, m_config_file, G_KEY_FILE_NONE, NULL);
@@ -349,53 +228,11 @@ static void config_read()
 	m_talk_event_number=g_key_file_get_integer(kf, "calendar_settings", "talk_event_number", NULL);	
 	m_talk_time=g_key_file_get_integer(kf, "calendar_settings", "talk_time", NULL);	
 	m_talk_tags=g_key_file_get_integer(kf, "calendar_settings", "talk_tags", NULL);
-	m_talk_priority=g_key_file_get_integer(kf, "calendar_settings", "talk_priority", NULL);	
-	m_talk_overlap = g_key_file_get_integer(kf, "calendar_settings", "talk_overlap", NULL);
-		
-	
-	//calendar
-	m_holidays = g_key_file_get_integer(kf, "calendar_settings", "holidays", NULL);	
-	m_show_end_time = g_key_file_get_integer(kf, "calendar_settings", "show_end_time", NULL);				
-	m_startup_notification=g_key_file_get_integer(kf, "calendar_settings", "startup_notification", NULL);	
-	m_font_size=g_key_file_get_integer(kf, "calendar_settings", "font_size", NULL);
-	m_use_adwaita_icons=g_key_file_get_integer(kf, "calendar_settings", "adwaita_icons", NULL);	
-	//colours
-	m_today_red =g_key_file_get_double (kf, "calendar_settings", "today_red", NULL);
-	m_today_green =g_key_file_get_double (kf, "calendar_settings", "today_green", NULL);
-	m_today_blue =g_key_file_get_double (kf, "calendar_settings", "today_blue", NULL);   
-	m_today_bg_red =g_key_file_get_double (kf, "calendar_settings", "today_bg_red", NULL);
-	m_today_bg_green =g_key_file_get_double (kf, "calendar_settings", "today_bg_green", NULL);
-	m_today_bg_blue =g_key_file_get_double (kf, "calendar_settings", "today_bg_blue", NULL);   
-	
-	m_today_frame =g_key_file_get_integer(kf, "calendar_settings", "today_frame", NULL); 
-	
-	m_event_red =g_key_file_get_double (kf, "calendar_settings", "event_red", NULL);
-	m_event_green =g_key_file_get_double (kf, "calendar_settings", "event_green", NULL);
-	m_event_blue =g_key_file_get_double (kf, "calendar_settings", "event_blue", NULL);  
-	m_event_bg_red =g_key_file_get_double (kf, "calendar_settings", "event_bg_red", NULL);
-	m_event_bg_green =g_key_file_get_double (kf, "calendar_settings", "event_bg_green", NULL);
-	m_event_bg_blue =g_key_file_get_double (kf, "calendar_settings", "event_bg_blue", NULL);   
-	
-	m_event_frame =g_key_file_get_integer(kf, "calendar_settings", "event_frame", NULL);
-	
-	m_holiday_red =g_key_file_get_double (kf, "calendar_settings", "holiday_red", NULL);
-	m_holiday_green =g_key_file_get_double (kf, "calendar_settings", "holiday_green", NULL);
-	m_holiday_blue =g_key_file_get_double (kf, "calendar_settings", "holiday_blue", NULL);
-	m_holiday_bg_red =g_key_file_get_double (kf, "calendar_settings", "holiday_bg_red", NULL);
-	m_holiday_bg_green =g_key_file_get_double (kf, "calendar_settings", "holiday_bg_green", NULL);
-	m_holiday_bg_blue =g_key_file_get_double (kf, "calendar_settings", "holiday_bg_blue", NULL);
-	
-	m_holiday_frame =g_key_file_get_integer(kf, "calendar_settings", "holiday_frame", NULL);  
-	
-	m_priority_red =g_key_file_get_double (kf, "calendar_settings", "priority_red", NULL);
-	m_priority_green =g_key_file_get_double (kf, "calendar_settings", "priority_green", NULL);
-	m_priority_blue =g_key_file_get_double (kf, "calendar_settings", "priority_blue", NULL);
-	m_priority_bg_red =g_key_file_get_double (kf, "calendar_settings", "priority_bg_red", NULL);
-	m_priority_bg_green =g_key_file_get_double (kf, "calendar_settings", "priority_bg_green", NULL);
-	m_priority_bg_blue =g_key_file_get_double (kf, "calendar_settings", "priority_bg_blue", NULL);
-	
-	m_priority_frame =g_key_file_get_integer(kf, "calendar_settings", "priority_frame", NULL);  
-		
+	m_talk_priority=g_key_file_get_integer(kf, "calendar_settings", "talk_priority", NULL);	//placeholder
+	m_talk_overlap = g_key_file_get_integer(kf, "calendar_settings", "talk_overlap", NULL);	//placeholder
+	m_holidays = g_key_file_get_integer(kf, "calendar_settings", "holidays", NULL);	//to do
+    m_frame = g_key_file_get_integer(kf, "calendar_settings", "frame", NULL);
+	m_show_end_time = g_key_file_get_integer(kf, "calendar_settings", "show_end_time", NULL);
 	g_key_file_free(kf);	
 	
 }
@@ -413,53 +250,10 @@ void config_write()
 	g_key_file_set_integer(kf, "calendar_settings", "talk_tags", m_talk_tags);
 	g_key_file_set_integer(kf, "calendar_settings", "talk_priority", m_talk_priority);		
 	g_key_file_set_integer(kf, "calendar_settings", "talk_overlap", m_talk_overlap);
-	
-	//calendar
-	g_key_file_set_integer(kf, "calendar_settings", "holidays", m_holidays);
+	g_key_file_set_integer(kf, "calendar_settings", "holidays", m_holidays); //to do
+	g_key_file_set_integer(kf, "calendar_settings", "frame", m_frame);
 	g_key_file_set_integer(kf, "calendar_settings", "show_end_time", m_show_end_time);	
-	g_key_file_set_integer(kf, "calendar_settings", "startup_notification", m_startup_notification);
-	g_key_file_set_integer(kf, "calendar_settings", "font_size", m_font_size);
-	g_key_file_set_integer(kf, "calendar_settings", "adwaita_icons", m_use_adwaita_icons);		
-	//colours
-	g_key_file_set_double(kf, "calendar_settings", "today_red", m_today_red);	
-	g_key_file_set_double(kf, "calendar_settings", "today_green", m_today_green);
-	g_key_file_set_double(kf, "calendar_settings", "today_blue", m_today_blue); 	
-	g_key_file_set_double(kf, "calendar_settings", "today_bg_red", m_today_bg_red);  
-	g_key_file_set_double(kf, "calendar_settings", "today_bg_green", m_today_bg_green); 
-	g_key_file_set_double(kf, "calendar_settings", "today_bg_blue", m_today_bg_blue); 
-	
-	g_key_file_set_integer(kf, "calendar_settings", "today_frame", m_today_frame);    
-	
-	g_key_file_set_double(kf, "calendar_settings", "event_red", m_event_red);
-	g_key_file_set_double(kf, "calendar_settings", "event_green", m_event_green);
-	g_key_file_set_double(kf, "calendar_settings", "event_blue", m_event_blue); 	
-	g_key_file_set_double(kf, "calendar_settings", "event_bg_red", m_event_bg_red);  
-	g_key_file_set_double(kf, "calendar_settings", "event_bg_green", m_event_bg_green); 
-	g_key_file_set_double(kf, "calendar_settings", "event_bg_blue", m_event_bg_blue); 
-	
-	g_key_file_set_integer(kf, "calendar_settings", "event_frame", m_event_frame);    
-	
-		
-	g_key_file_set_double(kf, "calendar_settings", "holiday_red", m_holiday_red);
-	g_key_file_set_double(kf, "calendar_settings", "holiday_green", m_holiday_green);
-	g_key_file_set_double(kf, "calendar_settings", "holiday_blue", m_holiday_blue); 	
-	g_key_file_set_double(kf, "calendar_settings", "holiday_bg_red", m_holiday_bg_red);  
-	g_key_file_set_double(kf, "calendar_settings", "holiday_bg_green", m_holiday_bg_green); 
-	g_key_file_set_double(kf, "calendar_settings", "holiday_bg_blue", m_holiday_bg_blue); 
-	
-	g_key_file_set_integer(kf, "calendar_settings", "holiday_frame", m_holiday_frame);  
-	
-	
-	g_key_file_set_double(kf, "calendar_settings", "priority_red", m_priority_red);
-	g_key_file_set_double(kf, "calendar_settings", "priority_green", m_priority_green);
-	g_key_file_set_double(kf, "calendar_settings", "priority_blue", m_priority_blue); 	
-	g_key_file_set_double(kf, "calendar_settings", "priority_bg_red", m_priority_bg_red);  
-	g_key_file_set_double(kf, "calendar_settings", "priority_bg_green", m_priority_bg_green); 
-	g_key_file_set_double(kf, "calendar_settings", "priority_bg_blue", m_priority_bg_blue); 
-	
-	g_key_file_set_integer(kf, "calendar_settings", "priority_frame", m_priority_frame);    
-	 	
-	
+
 	gsize length;
 	gchar * data = g_key_file_to_data(kf, &length, NULL);
 	g_file_set_contents(m_config_file, data, -1, NULL);
@@ -562,31 +356,33 @@ static void display_object_finalize (GObject *obj)
 
 static void display_object_class_init (DisplayObjectClass *class)
 {
-  
-  
-  GObjectClass *object_class = G_OBJECT_CLASS (class);
-   
-   //the object_class has virtual functions called get_property and set_property
-   //so you override these to provide your own getter and setter implementations
-   
-   //override the get_property of the object_class
-   object_class->get_property = display_object_get_property;
-   //override the set property of the object_class
-   object_class->set_property = display_object_set_property;
-   object_class->finalize = display_object_finalize;
 
- //property label used for listview display  and make it read writable
-  properties[PROP_LABEL] = g_param_spec_string ("label", "label", "used for list view display",
-                                                NULL, G_PARAM_READWRITE);
-  properties[PROP_ID] = g_param_spec_int ("id", "id", "id",
-                                          0, G_MAXINT, 0, G_PARAM_READWRITE);
-     
-  properties[PROP_STARTTIME] = g_param_spec_int ("starttime", "starttime", "starttime",
-                                          0, G_MAXINT, 0, G_PARAM_READWRITE);
-                                          
-     
-  //install the properties using the object_class, the number of proerties and the properties
-  g_object_class_install_properties (object_class, LAST_PROPERTY, properties);
+	// GObjectClass is the class structure for the GObject type
+	// G_OBJECT_CLASS casts the DisplayObjectClass called class into a GObjectClass structure
+
+	GObjectClass *object_class = G_OBJECT_CLASS (class);
+
+	//the object_class has virtual functions called get_property and set_property
+	//so you override these to provide your own getter and setter implementations
+
+	//override the get_property of the object_class
+	object_class->get_property = display_object_get_property;
+	//override the set property of the object_class
+	object_class->set_property = display_object_set_property;
+	object_class->finalize = display_object_finalize;
+
+	//property label used for listview display  and make it read writable
+	properties[PROP_LABEL] = g_param_spec_string ("label", "label", "used for list view display",
+												  NULL, G_PARAM_READWRITE);
+	properties[PROP_ID] = g_param_spec_int ("id", "id", "id",
+											0, G_MAXINT, 0, G_PARAM_READWRITE);
+
+	properties[PROP_STARTTIME] = g_param_spec_int ("starttime", "starttime", "starttime",
+												   0, G_MAXINT, 0, G_PARAM_READWRITE);
+
+
+	//install the properties using the object_class, the number of proerties and the properties
+	g_object_class_install_properties (object_class, LAST_PROPERTY, properties);
 }
 
 
@@ -703,9 +499,6 @@ GDate* calculate_easter(gint year) {
 	return edate;
 }
 
-//---------------------------------------------------------------------
-// Notifications
-//---------------------------------------------------------------------
 
 static int get_number_of_events()
 {
@@ -713,238 +506,22 @@ static int get_number_of_events()
 	
 	int event_count=0;
 	Event e;  
-	for (int i=0; i<m_db_size; i++)
+	for (int i=0; i<m_store_size; i++)
 	{  
-	e=db_store[i];
+	e=event_store[i];
 	if(m_year==e.year && m_month ==e.month && m_day==e.day)
 	{		
 	event_count++;
-	}//if		
+	}//if
+	//check for yearly events
+	if(m_year!=e.year && m_month ==e.month && m_day==e.day && e.is_yearly)
+	{
+	event_count++;
+	}
+
 	}//for
   
  return event_count;
-}
-
-
-static void show_notification(gchar *message)
-{ 
- gchar* command_str ="notify-send ";
- command_str= g_strconcat(command_str," \"Tiki Calendar\"" ," \"",message," \"", NULL);
- system(command_str);
-}
-
-//------------------------------------------------------------------
-//font style
-//--------------------------------------------------------------------
-gchar* get_css_string() {
-	
-	char *size_str = g_strdup_printf("%i", m_font_size); 
-	size_str =g_strconcat(size_str,"px;", NULL);
-	gchar* css_str = g_strdup_printf ("#cssView {font-size: %s }", size_str);	
-	return css_str;	
-}
-
-
-
-static void set_widget_font_size(GtkWidget* widget) {
-	
-	GtkStyleContext *context;
-	GtkCssProvider *cssProvider;	
-	gtk_widget_set_name(GTK_WIDGET(widget), "cssView"); 		
-	cssProvider = gtk_css_provider_new();
-	gtk_css_provider_load_from_data(cssProvider, get_css_string(),-1); 
-	context = gtk_widget_get_style_context(GTK_WIDGET(widget));		 
-	gtk_style_context_add_provider(context,    
-	GTK_STYLE_PROVIDER(cssProvider), 
-	GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
-}
-
-static void set_today_button_colour(GtkButton *button){
-	
-  GtkStyleContext *context_button;
-  GtkCssProvider *cssProvider; 	
-  cssProvider = gtk_css_provider_new();	
-  gtk_widget_set_name (GTK_WIDGET(button), "cssView");
-  
-  gchar* css_str=""; 
-  
-  int red=(int)(m_today_red*255);
-  int green=(int)(m_today_green*255);
-  int blue =(int)(m_today_blue*255);
-  int bg_red=(int)(m_today_bg_red*255);
-  int bg_green=(int)(m_today_bg_green*255);
-  int bg_blue =(int)(m_today_bg_blue*255);
-   
-  if(m_today_frame) {
-  css_str = g_strdup_printf (
-  "#cssView {"
-  "color: rgba(%i,%i,%i,1);"
-  "background-color: rgba(%i,%i,%i,1);"
-  "font-weight: bold;"
-  "border-top-width: 2px;" 
-  "border-top-color: black;"
-  "border-left-width: 2px;" 
-  "border-left-color: black;"
-  "border-bottom-width: 2px;" 
-  "border-bottom-color: black;"
-  "border-right-width: 2px;" 
-  "border-right-color: black;" 
-  "}", red, green, blue, bg_red, bg_green, bg_blue );
-  }
-  else {
-  css_str = g_strdup_printf (
-  "#cssView {"
-  "color: rgba(%i,%i,%i,1);"
-  "background-color: rgba(%i,%i,%i,1);"
-  "font-weight: bold;"  
-  "}", red, green, blue, bg_red, bg_green, bg_blue );
-  }
-  
-  gtk_css_provider_load_from_data(cssProvider, css_str,-1);   
-  context_button= gtk_widget_get_style_context(GTK_WIDGET(button));		 
-  gtk_style_context_add_provider(context_button, GTK_STYLE_PROVIDER(cssProvider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);	
-}
-
-
-static void set_event_button_colour(GtkButton *button){
-	
-  GtkStyleContext *context_button;
-  GtkCssProvider *cssProvider; 	
-  cssProvider = gtk_css_provider_new();	
-  gtk_widget_set_name (GTK_WIDGET(button), "cssView");
-  gchar* css_str=""; 
-  
-  int red=(int)(m_event_red*255);
-  int green=(int)(m_event_green*255);
-  int blue =(int)(m_event_blue*255);
-  int bg_red=(int)(m_event_bg_red*255);
-  int bg_green=(int)(m_event_bg_green*255);
-  int bg_blue =(int)(m_event_bg_blue*255);
-   
-      
-//border  
-if  (m_event_frame) {
-css_str = g_strdup_printf (
-  "#cssView {"
-  "color: rgba(%i,%i,%i,1);"
-  "background-color: rgba(%i,%i,%i,1);"
-  "font-weight: bold;"
-  "border-top-width: 2px;" 
-  "border-top-color: black;"
-  "border-left-width: 2px;" 
-  "border-left-color: black;"
-  "border-bottom-width: 2px;" 
-  "border-bottom-color: black;"
-  "border-right-width: 2px;" 
-  "border-right-color: black;" 
-  "}", red, green, blue,bg_red, bg_green, bg_blue );
-}
-else {
-css_str = g_strdup_printf (
-  "#cssView {"
-  "color: rgba(%i,%i,%i,1);"
-  "background-color: rgba(%i,%i,%i,1);"
-  "font-weight: bold;"
-  "}",red, green, blue, bg_red, bg_green, bg_blue );
-  
-}
-  
-  gtk_css_provider_load_from_data(cssProvider, css_str,-1);   
-  context_button= gtk_widget_get_style_context(GTK_WIDGET(button));		 
-  gtk_style_context_add_provider(context_button, GTK_STYLE_PROVIDER(cssProvider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);	
-}
-
-static void set_holiday_button_colour(GtkButton *button){
-	
-  GtkStyleContext *context_button;
-  GtkCssProvider *cssProvider; 	
-  cssProvider = gtk_css_provider_new();	
-  gtk_widget_set_name (GTK_WIDGET(button), "cssView");
-  gchar* css_str=""; 
-  
-   int red=(int)(m_holiday_red*255);
-  int green=(int)(m_holiday_green*255);
-  int blue =(int)(m_holiday_blue*255);
-  int bg_red=(int)(m_holiday_bg_red*255);
-  int bg_green=(int)(m_holiday_bg_green*255);
-  int bg_blue =(int)(m_holiday_bg_blue*255);
-     
-  //border  
-if  (m_holiday_frame) {
-css_str = g_strdup_printf (
-  "#cssView {"
-  "color: rgba(%i,%i,%i,1);"
-  "background-color: rgba(%i,%i,%i,1);"
-  "font-weight: bold;"
-  "border-top-width: 2px;" 
-  "border-top-color: black;"
-  "border-left-width: 2px;" 
-  "border-left-color: black;"
-  "border-bottom-width: 2px;" 
-  "border-bottom-color: black;"
-  "border-right-width: 2px;" 
-  "border-right-color: black;" 
-  "}", red, green, blue,bg_red, bg_green, bg_blue );
-} 
-else {
-css_str = g_strdup_printf (
-  "#cssView {"
-  "color: rgba(%i,%i,%i,1);"
-  "background-color: rgba(%i,%i,%i,1);"
-  "font-weight: bold;"
-  "}", red, green, blue, bg_red, bg_green, bg_blue );
-  
-}
-  
-  gtk_css_provider_load_from_data(cssProvider, css_str,-1);   
-  context_button= gtk_widget_get_style_context(GTK_WIDGET(button));		 
-  gtk_style_context_add_provider(context_button, GTK_STYLE_PROVIDER(cssProvider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);	
-}
-
-static void set_priority_button_colour(GtkButton *button){
-	
-  GtkStyleContext *context_button;
-  GtkCssProvider *cssProvider; 	
-  cssProvider = gtk_css_provider_new();	
-  gtk_widget_set_name (GTK_WIDGET(button), "cssView");
-  
-  gchar* css_str=""; 
-  
-  int red=(int)(m_priority_red*255);
-  int green=(int)(m_priority_green*255);
-  int blue =(int)(m_priority_blue*255);
-  int bg_red=(int)(m_priority_bg_red*255);
-  int bg_green=(int)(m_priority_bg_green*255);
-  int bg_blue =(int)(m_priority_bg_blue*255);
-   
-  if(m_priority_frame) {
-  css_str = g_strdup_printf (
-  "#cssView {"
-  "color: rgba(%i,%i,%i,1);"
-  "background-color: rgba(%i,%i,%i,1);"
-  "font-weight: bold;"
-  "border-top-width: 2px;" 
-  "border-top-color: black;"
-  "border-left-width: 2px;" 
-  "border-left-color: black;"
-  "border-bottom-width: 2px;" 
-  "border-bottom-color: black;"
-  "border-right-width: 2px;" 
-  "border-right-color: black;" 
-  "}", red, green, blue, bg_red, bg_green, bg_blue );
-  }
-  else {
-  css_str = g_strdup_printf (
-  "#cssView {"
-  "color: rgba(%i,%i,%i,1);"
-  "background-color: rgba(%i,%i,%i,1);"
-  "font-weight: bold;"  
-  "}", red, green, blue, bg_red, bg_green, bg_blue );
-  }
-  
-  gtk_css_provider_load_from_data(cssProvider, css_str,-1);   
-  context_button= gtk_widget_get_style_context(GTK_WIDGET(button));		 
-  gtk_style_context_add_provider(context_button, GTK_STYLE_PROVIDER(cssProvider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);	
 }
 
 //--------------------------------------------------------------------
@@ -972,201 +549,6 @@ static void callbk_check_button_allday_toggled (GtkCheckButton *check_button, gp
   
 }
 
-//-----------------------------------------------------------------
-//Convert
-//-----------------------------------------------------------------
-
-gchar* convert_number_to_string(int number) {
-	
-	gchar* result =NULL;
-	
-	switch (number) {		
-		case 1:
-		result ="one";
-		break;		
-		case 2:
-		result ="two";
-		break;
-		case 3:
-		result ="three";
-		break;
-		case 4:
-		result ="four";
-		break;
-		case 5:
-		result ="five";
-		break;
-		case 6:
-		result ="six";
-		break;
-		case 7:
-		result ="seven";
-		break;
-		case 8:
-		result ="eight";
-		break;
-		case 9:
-		result ="nine";
-		break;
-		case 10:
-		result ="ten";
-		break;
-		case 11:
-		result ="eleven";
-		break;
-		case 12:
-		result ="twelve";
-		break;
-		case 13:
-		result ="thirteen";
-		break;
-		case 14:
-		result ="fourteen";
-		break;
-		case 15:
-		result ="fifteen";
-		break;
-		case 16:
-		result ="sixteen";
-		break;
-		case 17:
-		result ="seventeen";
-		break;
-		case 18:
-		result ="eighteen";
-		break;
-		case 19:
-		result ="nineteen";
-		break;
-		case 20:
-		result ="twenty";
-		break;
-		case 21:
-		result ="twenty one";
-		break;
-		case 22:
-		result ="twenty two";
-		break;
-		case 23:
-		result ="twenty three";
-		break;
-		case 24:
-		result ="twenty four";
-		break;
-		case 25:
-		result ="twenty five";
-		break;
-		case 26:
-		result ="twenty six";
-		break;
-		case 27:
-		result ="twenty seven";
-		break;
-		case 28:
-		result ="twenty eight";
-		break;
-		case 29:
-		result ="twenty nine";
-		break;
-		case 30:
-		result ="thirty";
-		break;
-		case 31:
-		result ="thirty one";
-		break;
-		case 32:
-		result ="thirty two";
-		break;
-		case 33:
-		result ="thirty three";
-		break;
-		case 34:
-		result ="thirty four";
-		break;
-		case 35:
-		result ="thirty five";
-		break;
-		case 36:
-		result ="thirty six";
-		break;
-		case 37:
-		result ="thirty seven";
-		break;
-		case 38:
-		result ="thirty eight";
-		break;
-		case 39:
-		result ="thirty nine";
-		break;
-		case 40:
-		result ="forty";
-		break;
-		case 41:
-		result ="forty one";
-		break;
-		case 42:
-		result ="forty two";
-		break;
-		case 43:
-		result ="forty three";
-		break;
-		case 44:
-		result ="forty four";
-		break;
-		case 45:
-		result ="forty five";
-		break;
-		case 46:
-		result ="forty six";
-		break;
-		case 47:
-		result ="forty seven";
-		break;
-		case 48:
-		result ="forty eight";
-		break;
-		case 49:
-		result ="forty nine";
-		break;
-		case 50:
-		result ="fifty";
-		break;
-		case 51:
-		result ="fifty one";
-		break;
-		case 52:
-		result ="fifty two";
-		break;
-		case 53:
-		result ="fifty three";
-		break;
-		case 54:
-		result ="fifty four";
-		break;
-		case 55:
-		result ="fifty five";
-		break;
-		case 56:
-		result ="fifty six";
-		break;
-		case 57:
-		result ="fifty seven";
-		break;
-		case 58:
-		result ="fifty eight";
-		break;
-		case 59:
-		result ="fifty nine";
-		break;
-		
-		default:		
-		result ="zero";
-		break;		
-				
-	}
-		
-	return result;
-}
 
 //-----------------------------------------------------------------
 // Speak
@@ -1180,7 +562,7 @@ static void callbk_speak(GSimpleAction* action, GVariant *parameter,gpointer use
 
 
 //---------------------------------------------------------------------
-// Speaking
+// Speaking using local talk wav files
 //---------------------------------------------------------------------
 
 
@@ -1672,7 +1054,6 @@ char* convert_min_to_cardinal_string(int min){
 		 break;
      } //switch start min
 
-
 	return result;
 
 }
@@ -1719,9 +1100,7 @@ char* result="";
 	 result="talk/c/christmas.wav";
 	 }
 
-
 	 //d words
-
 	 if (g_strcmp0(word,"day")==0) {
 	 result="talk/d/day.wav";
 	 }
@@ -1760,7 +1139,6 @@ char* result="";
 	 result="talk/f/funeral.wav";
 	 }
 
-
 	 //h words
 	 if (g_strcmp0(word,"halloween")==0) {
 	 result="talk/h/halloween.wav";
@@ -1773,7 +1151,6 @@ char* result="";
 	 if (g_strcmp0(word,"hospital")==0) {
 	 result="talk/h/hospital.wav";
 	 }
-
 
 	 //i words
 	 if (g_strcmp0(word,"important")==0) {
@@ -1827,7 +1204,6 @@ char* result="";
 	 //q words
 	 //r words
 
-
 	 if (g_strcmp0(word,"reminder")==0) {
 	 result="talk/r/reminder.wav";
 	 }
@@ -1835,6 +1211,10 @@ char* result="";
 
 	 if (g_strcmp0(word,"restaurant")==0) {
 	 result="talk/r/restaurant.wav";
+	 }
+
+	  if (g_strcmp0(word,"retirement")==0) {
+	 result="talk/r/retirement.wav";
 	 }
 
 	 // s words
@@ -1860,16 +1240,22 @@ char* result="";
 
 	 // w words
 
+	  if (g_strcmp0(word,"walk")==0) {
+	 result="talk/w/walk.wav";
+	 }
+
 	 if (g_strcmp0(word,"wedding")==0) {
 	 result="talk/w/wedding.wav";
 	 }
 
+	  if (g_strcmp0(word,"work")==0) {
+	 result="talk/w/work.wav";
+	 }
 
 	 //y words
 	 if (g_strcmp0(word,"year")==0) {
 	 result="talk/y/year.wav";
 	 }
-
 
 return result;
 }
@@ -1886,7 +1272,6 @@ static gpointer thread_aplaywav(gpointer user_data)
 	//wavplay(input);
     gchar* aplay_str ="aplay";
     aplay_str=g_strconcat(aplay_str," ",input, NULL);
-    ////play the sox wav
     system(aplay_str);
 
     g_mutex_unlock (&lock); //thread mutex unlock
@@ -1951,15 +1336,23 @@ static void speak_events() {
    Event e;
    //load day events
    int jj=0;
-   for (int i=0; i<m_db_size; i++)
+   for (int i=0; i<m_store_size; i++)
 	{
-	e=db_store[i];
-	if(m_year==e.year && m_month ==e.month && m_day==e.day)
-	{
-	day_events[jj] =e;
-	day_events_number=day_events_number+1;
-	jj++;
-	}//if
+		e=event_store[i];
+		if(m_year==e.year && m_month ==e.month && m_day==e.day)
+		{
+			day_events[jj] =e;
+			day_events_number=day_events_number+1;
+			jj++;
+		}//if
+		if(m_year!=e.year && m_month ==e.month && m_day==e.day && e.is_yearly)
+		{
+			//yearly events
+			day_events[jj] =e;
+			day_events_number=day_events_number+1;
+			jj++;
+		}
+
 	}//for
 
    //sort
@@ -2038,7 +1431,7 @@ static void speak_events() {
 	gchar** words;
 	//gchar* word;
 	gint j=0;
-	//GList *event_type_list=NULL;
+	//GList *event_word_list=NULL;
 
 	Event day_event;
 
@@ -2051,7 +1444,7 @@ static void speak_events() {
 	  //check for all day event here
 
 	   float start_time =day_event.start_time;
-	   g_print("start_time = %f\n",start_time);
+	   //g_print("start_time = %f\n",start_time);
 
 	   float integral_part, fractional_part;
 	   fractional_part = modff(day_event.start_time, &integral_part);
@@ -2059,8 +1452,8 @@ static void speak_events() {
 	   fractional_part=round(fractional_part *100);
 	   int start_min=(int) (fractional_part); //start_min
 
-	   g_print("start hour =%i\n",start_hour);
-	   g_print("start min = %i\n",start_min);
+	   //g_print("start hour =%i\n",start_hour);
+	   //g_print("start min = %i\n",start_min);
 
 	   char* start_hour_str="";
 	   char* start_min_str="";
@@ -2163,52 +1556,62 @@ static void speak_events() {
 
 	 //now read out event tag words
 
-	 GList *event_type_list=NULL;
-	 str=day_event.type;
-	 str=day_event.title;
-	  g_print("title = %s\n",str);
+	 if(m_talk_tags) {
+
+	 GList *event_word_list=NULL;
+	 //str=day_event.type;
+	 str=day_event.summary;
+	  //g_print("summary = %s\n",str);
 	  words = g_strsplit (str, " ", 0); //split on space
 	j=0;
 	while(words[j] != NULL)
 	{
 	//g_print("words = %s\n",words[j]);
-	event_type_list = g_list_append(event_type_list, words[j]);
+	event_word_list = g_list_append(event_word_list, words[j]);
 	j++;
 	} //while loop words
 
-    //} //for day events??
+ 	//cycle through the event type word list
+	gpointer pt_event_word_list;
+	gchar* event_word_list_str;
+	gchar* event_word_list_str_lower;
 
+	//g_print("g_list length = %i\n",g_list_length(event_word_list));
 
-
-	//cycle through the event type word list
-	gpointer pt_event_type_list;
-	gchar* event_type_list_str;
-	gchar* event_type_list_str_lower;
-
-	//g_print("g_list length = %i\n",g_list_length(event_type_list));
-
-	for(int i=0;i <g_list_length(event_type_list);i++)
+	for(int i=0;i <g_list_length(event_word_list);i++)
 	{
-		pt_event_type_list=g_list_nth_data(event_type_list,i);
-		event_type_list_str=(gchar *)pt_event_type_list;
-		event_type_list_str_lower= g_ascii_strdown(event_type_list_str, -1);
+		pt_event_word_list=g_list_nth_data(event_word_list,i);
+		event_word_list_str=(gchar *)pt_event_word_list;
+		event_word_list_str_lower= g_ascii_strdown(event_word_list_str, -1);
 
-		//g_print("event_type_list_str_lower = %s\n",event_type_list_str_lower);
+		char* voice_str =voice_dictionary(event_word_list_str_lower);
+		//g_print("voice_str = %s\n",voice_str);
 
-		//add event type words to wavlist
-
-		char* voice_str =voice_dictionary(event_type_list_str_lower);
-		g_print("voice_str = %s\n",voice_str);
-		//if (voice_str=="") voice_str="talk/e/event.wav";
 		if (g_file_test(g_build_filename (cur_dir,voice_str, NULL), G_FILE_TEST_IS_REGULAR)) {
 			wavlist = g_list_append(wavlist, g_build_filename (cur_dir,voice_str, NULL));
 		}
 
      }//for_list_length
 
-    g_list_free(event_type_list);
+    g_list_free(event_word_list);
 
-      } //for day events??
+      } //m_tags
+
+
+      if(m_talk_priority) {
+
+		  if(day_event.priority)
+		  {
+			   if (g_file_test(g_build_filename (cur_dir,"talk/h/high.wav", NULL), G_FILE_TEST_IS_REGULAR)) {
+				   wavlist = g_list_append(wavlist, g_build_filename (cur_dir,"talk/h/high.wav", NULL));
+			   }
+			   if (g_file_test(g_build_filename (cur_dir,"talk/p/priority.wav", NULL), G_FILE_TEST_IS_REGULAR)) {
+				   wavlist = g_list_append(wavlist, g_build_filename (cur_dir,"talk/p/priority.wav", NULL));
+			   }
+		  }
+	  }
+
+   } //for dayevents
 
 
 	//--------------------------------------------------------------
@@ -2246,103 +1649,74 @@ static void speak_events() {
 }
 
 
-void reload_csv_file() {
+static void callbk_add(GtkButton *button, gpointer  user_data){
 
-	db_store=malloc(max_records*sizeof(Event));
-
-	if (db_store==NULL){
-	g_print("memory allocation failed -not enough RAM\n");
-	exit(1);
-	}
-
-
-	if(file_exists("eventsdb.csv"))
-	{
-		//g_print("eventsdb.csv exists-load it\n");
-		load_csv_file();
-	}
-
-}
-
-static void callbk_new_event_response(GtkDialog *dialog, gint response_id,  gpointer  user_data)
-{
-	
-	if(!GTK_IS_DIALOG(dialog)) { 
-	//g_print("New Event Response: not a dialog\n");	
-	return;
-	}
-	
-	
+    //g_print("add button clicked");
 	GtkWidget *window = user_data;
-	
-	GtkEntryBuffer *buffer_title; 	
-	GtkWidget *entry_title = g_object_get_data(G_OBJECT(dialog), "entry-title-key");
-	
-	GtkEntryBuffer *buffer_location; 
-	GtkWidget *entry_location = g_object_get_data(G_OBJECT(dialog), "entry-location-key");
-		
-	  
-	GtkWidget *spin_button_start_time= g_object_get_data(G_OBJECT(dialog), "spin-start-time-key");  
-    GtkWidget *spin_button_end_time= g_object_get_data(G_OBJECT(dialog), "spin-end-time-key");       
-   
-	GtkWidget *check_button_allday= g_object_get_data(G_OBJECT(dialog), "check-button-allday-key"); 
-    GtkWidget *check_button_isyearly= g_object_get_data(G_OBJECT(dialog), "check-button-isyearly-key");  
-    GtkWidget *check_button_priority= g_object_get_data(G_OBJECT(dialog), "check-button-priority-key");
-		
-	
-	if(response_id==GTK_RESPONSE_OK)
-	{
-	buffer_title = gtk_entry_get_buffer (GTK_ENTRY(entry_title));	
-	m_title= gtk_entry_buffer_get_text (buffer_title);	
-		
-	m_title =remove_semicolons(m_title);
-	//m_title =remove_punctuations(m_title);
-			
-	buffer_location = gtk_entry_get_buffer (GTK_ENTRY(entry_location));	
-	m_location= gtk_entry_buffer_get_text (buffer_location);	
-	m_location =remove_semicolons(m_location);
-		
 
-	m_type ="category";
-	
+	GtkWidget *dialog = g_object_get_data(G_OBJECT(button), "dialog-key");
+
+	GtkEntryBuffer *buffer_summary;
+	GtkWidget *entry_summary = g_object_get_data(G_OBJECT(button), "entry-summary-key");
+
+	GtkEntryBuffer *buffer_location;
+	GtkWidget *entry_location = g_object_get_data(G_OBJECT(button), "entry-location-key");
+
+
+	GtkWidget *spin_button_start_time= g_object_get_data(G_OBJECT(button), "spin-start-time-key");
+    GtkWidget *spin_button_end_time= g_object_get_data(G_OBJECT(button), "spin-end-time-key");
+
+	GtkWidget *check_button_allday= g_object_get_data(G_OBJECT(button), "check-button-allday-key");
+    GtkWidget *check_button_isyearly= g_object_get_data(G_OBJECT(button), "check-button-isyearly-key");
+    GtkWidget *check_button_priority= g_object_get_data(G_OBJECT(button), "check-button-priority-key");
+
+
+
+	buffer_summary = gtk_entry_get_buffer (GTK_ENTRY(entry_summary));
+	m_summary= gtk_entry_buffer_get_text (buffer_summary);
+
+	m_summary =remove_semicolons(m_summary);
+	//m_summary =remove_punctuations(m_summary);
+
+	buffer_location = gtk_entry_get_buffer (GTK_ENTRY(entry_location));
+	m_location= gtk_entry_buffer_get_text (buffer_location);
+	m_location =remove_semicolons(m_location);
+	m_description ="todo";
+
 	int fd;
 	Event event;
-	event.id =m_db_size;	
-	strcpy(event.title,m_title);
+	event.id =m_store_size;
+	strcpy(event.summary,m_summary);
 	strcpy(event.location,m_location);
-	strcpy(event.type,m_type);
+	strcpy(event.description,m_description);
 	event.year=m_year;
 	event.month=m_month;
 	event.day=m_day;
-	
+
 	m_start_time =gtk_spin_button_get_value (GTK_SPIN_BUTTON(spin_button_start_time));
 	m_end_time =gtk_spin_button_get_value (GTK_SPIN_BUTTON(spin_button_end_time));
-		
+
 	event.start_time=m_start_time;
 	event.end_time=m_end_time;
-	
+
 	if(event.end_time<event.start_time) {
 		event.end_time=event.start_time;
 	}
-    
+
 	event.is_yearly=gtk_check_button_get_active (GTK_CHECK_BUTTON(check_button_isyearly));
 	event.is_allday=gtk_check_button_get_active (GTK_CHECK_BUTTON(check_button_allday));
 	event.priority=gtk_check_button_get_active(GTK_CHECK_BUTTON(check_button_priority));
-	
-	db_store[m_db_size] =event;			
-	m_db_size=m_db_size+1;	
 
-	//syncing issue:  try save and reload as temporary fix
-	//save_csv_file();
-	//reload_csv_file();
-
+	event_store[m_store_size] =event;
+	m_store_size=m_store_size+1;
 	update_calendar(GTK_WINDOW(window));
 	update_store(m_year,m_month,m_day);
-	m_id_selection=-1;			
-	}		
-	gtk_window_destroy(GTK_WINDOW(dialog));	
-}
+	m_id_selection=-1;
 
+	gtk_window_destroy(GTK_WINDOW(dialog));
+	//gtk_window_close(GTK_WINDOW(window));
+
+}
 
 static void callbk_new_event(GtkButton *button, gpointer  user_data){
  
@@ -2354,8 +1728,9 @@ static void callbk_new_event(GtkButton *button, gpointer  user_data){
   GtkWidget *box;  
   GtkWidget *label_date;  
   GtkEntryBuffer *buffer; 
-  GtkWidget *label_entry_title; 
-  GtkWidget *entry_title;
+
+  GtkWidget *label_entry_summary;
+  GtkWidget *entry_summary;
   
   GtkWidget *label_location; 
   GtkWidget *entry_location;	
@@ -2376,6 +1751,8 @@ static void callbk_new_event(GtkButton *button, gpointer  user_data){
   GtkWidget *check_button_isyearly;
   GtkWidget *check_button_priority;
 
+  GtkWidget *button_add;
+
   GDate *event_date; 
   event_date = g_date_new();
   event_date = g_date_new_dmy(m_day,m_month,m_year);
@@ -2390,41 +1767,38 @@ static void callbk_new_event(GtkButton *button, gpointer  user_data){
   
   date_str =g_strconcat(date_str,day_str,"-",month_str,"-",year_str,NULL); 
   
-  dialog = gtk_dialog_new_with_buttons ("New Event", GTK_WINDOW(window),   
-  GTK_DIALOG_MODAL|GTK_DIALOG_DESTROY_WITH_PARENT|GTK_DIALOG_USE_HEADER_BAR,
-  "OK", GTK_RESPONSE_OK, "Cancel", GTK_RESPONSE_CANCEL, NULL);
+  dialog =gtk_window_new(); //gtk_dialog_new_with_buttons to be deprecated gtk4.10
   
   gtk_window_set_title (GTK_WINDOW (dialog), "New Event");
   gtk_window_set_default_size(GTK_WINDOW(dialog),350,100);  
   
   box =gtk_box_new(GTK_ORIENTATION_VERTICAL,1);  
   gtk_window_set_child (GTK_WINDOW (dialog), box);
+
+  button_add = gtk_button_new_with_label ("Add");
+  g_signal_connect (button_add, "clicked", G_CALLBACK (callbk_add), window);
     
   label_date =gtk_label_new(date_str);  
   
-  label_entry_title =gtk_label_new("Event Title"); 
-  entry_title =gtk_entry_new(); 
-  gtk_entry_set_max_length(GTK_ENTRY(entry_title),100);
+  label_entry_summary =gtk_label_new("Event Summary");
+  entry_summary =gtk_entry_new();
+  gtk_entry_set_max_length(GTK_ENTRY(entry_summary),100);
   
   label_location =gtk_label_new("Location"); 
   entry_location =gtk_entry_new(); 
   gtk_entry_set_max_length(GTK_ENTRY(entry_location),100);
   
-    
   gtk_box_append(GTK_BOX(box), label_date);
-  gtk_box_append(GTK_BOX(box), label_entry_title);
-  gtk_box_append(GTK_BOX(box), entry_title);
+  gtk_box_append(GTK_BOX(box), label_entry_summary);
+  gtk_box_append(GTK_BOX(box), entry_summary);
   gtk_box_append(GTK_BOX(box), label_location);
   gtk_box_append(GTK_BOX(box), entry_location);
- 
-     
-     
-  g_object_set_data(G_OBJECT(dialog), "entry-title-key",entry_title);
-  g_object_set_data(G_OBJECT(dialog), "entry-location-key",entry_location);
- 
-  
-  g_object_set_data(G_OBJECT(dialog), "dialog-window-key",window); 
- 
+
+
+  g_object_set_data(G_OBJECT(button_add), "dialog-key",dialog);
+  g_object_set_data(G_OBJECT(button_add), "entry-summary-key",entry_summary);
+  g_object_set_data(G_OBJECT(button_add), "entry-location-key",entry_location);
+
   //--------------------------------------------------------
   // Start time spin buttons
   //--------------------------------------------------------- 
@@ -2439,7 +1813,8 @@ static void callbk_new_event(GtkButton *button, gpointer  user_data){
   gtk_box_append (GTK_BOX(box_start_time),label_start_time);
   gtk_box_append (GTK_BOX(box_start_time),spin_button_start_time);  
   gtk_box_append(GTK_BOX(box), box_start_time);
-  g_object_set_data(G_OBJECT(dialog), "spin-start-time-key",spin_button_start_time); 
+
+  g_object_set_data(G_OBJECT(button_add), "spin-start-time-key",spin_button_start_time);
   
   //end time spin
    GtkAdjustment *adjustment_end;  
@@ -2450,7 +1825,8 @@ static void callbk_new_event(GtkButton *button, gpointer  user_data){
   gtk_box_append (GTK_BOX(box_end_time),label_end_time);
   gtk_box_append (GTK_BOX(box_end_time),spin_button_end_time);  
   gtk_box_append(GTK_BOX(box), box_end_time);
-  g_object_set_data(G_OBJECT(dialog), "spin-end-time-key",spin_button_end_time);   
+
+  g_object_set_data(G_OBJECT(button_add), "spin-end-time-key",spin_button_end_time);
   
   //check buttons 
   check_button_allday = gtk_check_button_new_with_label ("Is All Day");  
@@ -2466,104 +1842,103 @@ static void callbk_new_event(GtkButton *button, gpointer  user_data){
   gtk_box_append(GTK_BOX(box), check_button_allday);
   gtk_box_append(GTK_BOX(box), check_button_isyearly);
   gtk_box_append(GTK_BOX(box), check_button_priority);
+
+  gtk_box_append(GTK_BOX(box), button_add);
   
-  g_object_set_data(G_OBJECT(dialog), "check-button-allday-key",check_button_allday);
-  g_object_set_data(G_OBJECT(dialog), "check-button-isyearly-key",check_button_isyearly);
-  g_object_set_data(G_OBJECT(dialog), "check-button-priority-key",check_button_priority);
+  g_object_set_data(G_OBJECT(button_add), "check-button-allday-key",check_button_allday);
+  g_object_set_data(G_OBJECT(button_add), "check-button-isyearly-key",check_button_isyearly);
+  g_object_set_data(G_OBJECT(button_add), "check-button-priority-key",check_button_priority);
    
-  set_widget_font_size(dialog);
-  g_signal_connect (dialog, "response", G_CALLBACK (callbk_new_event_response),window);
-  
-  gtk_window_present (GTK_WINDOW (dialog)); 
+  gtk_window_present (GTK_WINDOW (dialog));
   
 }
 //----------------------------------------------------------------------
 // Edit event
 //----------------------------------------------------------------------
 
-void callbk_edit_event_response(GtkDialog *dialog, gint response_id,  gpointer  user_data)
-{
-		
-	if(!GTK_IS_DIALOG(dialog)) { 
-	g_print("New Event Response: not a dialog\n");	
-	return;
-	}
-		
-	GtkWidget *window = user_data;	
-	GtkEntryBuffer *buffer_title; 	
-	GtkWidget *entry_title = g_object_get_data(G_OBJECT(dialog), "entry-title-key");
-	
-	GtkEntryBuffer *buffer_location; 
-	GtkWidget *entry_location = g_object_get_data(G_OBJECT(dialog), "entry-location-key");
-			
-	GtkWidget *spin_button_start_time= g_object_get_data(G_OBJECT(dialog), "spin-start-time-key");  
-    GtkWidget *spin_button_end_time= g_object_get_data(G_OBJECT(dialog), "spin-end-time-key");       
-    
-    GtkWidget *check_button_allday= g_object_get_data(G_OBJECT(dialog), "check-button-allday-key"); 
-    GtkWidget  *check_button_isyearly= g_object_get_data(G_OBJECT(dialog), "check-button-isyearly-key");  
-    GtkWidget  *check_button_priority= g_object_get_data(G_OBJECT(dialog), "check-button-priority-key");
-	
-			
-	if(response_id==GTK_RESPONSE_OK)
-	{	
+
+static void callbk_update(GtkButton *button, gpointer  user_data){
+
+	g_print("update event");
+
+	GtkWidget *window = user_data;
+
+	GtkWidget *dialog = g_object_get_data(G_OBJECT(button), "dialog-key");
+
+
+	GtkEntryBuffer *buffer_summary;
+	GtkWidget *entry_summary = g_object_get_data(G_OBJECT(button), "entry-summary-key");
+
+	GtkEntryBuffer *buffer_location;
+	GtkWidget *entry_location = g_object_get_data(G_OBJECT(button), "entry-location-key");
+
+	GtkWidget *spin_button_start_time= g_object_get_data(G_OBJECT(button), "spin-start-time-key");
+    GtkWidget *spin_button_end_time= g_object_get_data(G_OBJECT(button), "spin-end-time-key");
+
+    GtkWidget *check_button_allday= g_object_get_data(G_OBJECT(button), "check-button-allday-key");
+    GtkWidget  *check_button_isyearly= g_object_get_data(G_OBJECT(button), "check-button-isyearly-key");
+    GtkWidget  *check_button_priority= g_object_get_data(G_OBJECT(button), "check-button-priority-key");
+
+
+
 	//set data
-	buffer_title = gtk_entry_get_buffer (GTK_ENTRY(entry_title));	
-	m_title= gtk_entry_buffer_get_text (buffer_title);
-	m_title =remove_semicolons(m_title);	
-	
-	buffer_location = gtk_entry_get_buffer (GTK_ENTRY(entry_location));	
+	buffer_summary = gtk_entry_get_buffer (GTK_ENTRY(entry_summary));
+	m_summary= gtk_entry_buffer_get_text (buffer_summary);
+	m_summary =remove_semicolons(m_summary);
+
+	buffer_location = gtk_entry_get_buffer (GTK_ENTRY(entry_location));
 	m_location= gtk_entry_buffer_get_text (buffer_location);
 	m_location =remove_semicolons(m_location);
-		
 
-	m_type="category";
-			
-	//insert change into database	
+
+	m_description="todo";
+
+	//insert change into database
 	Event event;
-    for(int i=0; i<m_db_size; i++)
+    for(int i=0; i<m_store_size; i++)
     {
-	event=db_store[i];
-	
-	if(event.id==m_id_selection){		
-	
-	strcpy(event.title, m_title); 
+	event=event_store[i];
+
+	if(event.id==m_id_selection){
+
+	strcpy(event.summary, m_summary);
 	strcpy(event.location, m_location);
-	strcpy(event.type,m_type); 	
+	strcpy(event.description,m_description);
 	event.year=m_year;
 	event.month=m_month;
-	event.day=m_day;	
+	event.day=m_day;
 	//float start_time, end_time;
 	m_start_time =gtk_spin_button_get_value (GTK_SPIN_BUTTON(spin_button_start_time));
-	m_end_time =gtk_spin_button_get_value (GTK_SPIN_BUTTON(spin_button_end_time));		
-		
+	m_end_time =gtk_spin_button_get_value (GTK_SPIN_BUTTON(spin_button_end_time));
+
 	event.start_time=m_start_time;
 	event.end_time=m_end_time;
-	
+
 	if(event.end_time<event.start_time) {
 		event.end_time=event.start_time;
 	}
 	//GTK_IS_CHECK_BUTTON
 	event.is_yearly=gtk_check_button_get_active (GTK_CHECK_BUTTON(check_button_isyearly));
 	event.is_allday=gtk_check_button_get_active (GTK_CHECK_BUTTON(check_button_allday));
-	event.priority=gtk_check_button_get_active(GTK_CHECK_BUTTON(check_button_priority));	
-	db_store[i]=event;	
-	break;	
+	event.priority=gtk_check_button_get_active(GTK_CHECK_BUTTON(check_button_priority));
+	event_store[i]=event;
+	break;
 	} //if
-	
+
     } //for
-		
+
 	update_calendar(GTK_WINDOW(window));
 	update_store(m_year,m_month,m_day);
 	m_row_index=-1;
 	m_id_selection=-1;
-	
-	}
-			
-	gtk_window_destroy(GTK_WINDOW(dialog));	
+
+	gtk_window_destroy(GTK_WINDOW(dialog));
+
+
+
+
+
 }
-
-
-
 
 //---------------------------------------------------------------------
 // callback edit event
@@ -2572,7 +1947,7 @@ static void callbk_edit_event(GtkButton *button, gpointer  user_data){
 	
 	
 	if (m_id_selection==-1) return;
-		
+
 	GtkWindow *window =user_data;
 	
 	GtkWidget *dialog;  
@@ -2580,16 +1955,16 @@ static void callbk_edit_event(GtkButton *button, gpointer  user_data){
 	GtkWidget *grid; 
 	GtkWidget *box;  
 	GtkWidget *label_date;  
-	GtkEntryBuffer *buffer_title; 
+	GtkEntryBuffer *buffer_summary;
 	GtkEntryBuffer *buffer_location;
-	GtkEntryBuffer *buffer_type;  
+	//GtkEntryBuffer *buffer_description;
 	
-	GtkWidget *label_entry_title; 
-	GtkWidget *entry_title;	
+	GtkWidget *label_entry_summary;
+	GtkWidget *entry_summary;
 	
 	GtkWidget *label_location; 
-    GtkWidget *entry_location;
-   
+	GtkWidget *entry_location;
+
 	
 	//Start time
 	GtkWidget *label_start_time;
@@ -2605,6 +1980,8 @@ static void callbk_edit_event(GtkButton *button, gpointer  user_data){
 	GtkWidget *check_button_allday;	
 	GtkWidget *check_button_isyearly;
 	GtkWidget *check_button_priority;
+
+	GtkWidget *button_update;
 	
 	GDate *event_date; 
 	event_date = g_date_new();
@@ -2620,124 +1997,130 @@ static void callbk_edit_event(GtkButton *button, gpointer  user_data){
 	
 	date_str =g_strconcat(date_str,day_str,"-",month_str,"-",year_str,NULL); 
 	
-    dialog = gtk_dialog_new_with_buttons ("Edit Event", GTK_WINDOW(window), 
-	GTK_DIALOG_MODAL|GTK_DIALOG_DESTROY_WITH_PARENT|GTK_DIALOG_USE_HEADER_BAR,
-	"OK", GTK_RESPONSE_OK, "Cancel", GTK_RESPONSE_CANCEL, NULL);
+
+	dialog =gtk_window_new(); //gtk_dialog_new_with_buttons  deprecated gtk4.10
 	
 	gtk_window_set_title (GTK_WINDOW (dialog), "Edit Event");
 	gtk_window_set_default_size(GTK_WINDOW(dialog),350,100);  
 	
 	box =gtk_box_new(GTK_ORIENTATION_VERTICAL,1);  
 	gtk_window_set_child (GTK_WINDOW (dialog), box);
-		
+
 	//find event in database    
 	Event e;
-    for(int i=0; i<m_db_size; i++)
-    {
-	e=db_store[i];	
-	if(e.id==m_id_selection){	
-	m_title =e.title;
-	m_location =e.location;
-	m_type =e.type;
-	m_year=e.year;
-	m_month=e.month;
-	m_day=e.day;            
-	break;	
-	}	
-    }
+	for(int i=0; i<m_store_size; i++)
+	{
+		e=event_store[i];
+		if(e.id==m_id_selection){
+			m_summary =e.summary;
+			m_location =e.location;
+			m_description =e.description;
+			m_year=e.year;
+			m_month=e.month;
+			m_day=e.day;
+			break;
+		}
+	}
+
+
+	label_date =gtk_label_new(date_str);
+
+	button_update = gtk_button_new_with_label ("Update");
+    g_signal_connect (button_update, "clicked", G_CALLBACK (callbk_update), window);
 	
+	label_entry_summary =gtk_label_new("Event Summary");
+	entry_summary =gtk_entry_new();
+	gtk_entry_set_max_length(GTK_ENTRY(entry_summary),100);
+	buffer_summary=gtk_entry_buffer_new(m_summary,-1); //show  event summary
+	gtk_entry_set_buffer(GTK_ENTRY(entry_summary),buffer_summary);
 	
-	label_date =gtk_label_new(date_str);  
-	
-	label_entry_title =gtk_label_new("Event Title"); 
-    entry_title =gtk_entry_new(); 
-    gtk_entry_set_max_length(GTK_ENTRY(entry_title),100);
-    buffer_title=gtk_entry_buffer_new(m_title,-1); //show  title
-	gtk_entry_set_buffer(GTK_ENTRY(entry_title),buffer_title);
-	
-    label_location =gtk_label_new("Location"); 
+	label_location =gtk_label_new("Location");
 	entry_location =gtk_entry_new(); 
 	gtk_entry_set_max_length(GTK_ENTRY(entry_location),100);
 	buffer_location=gtk_entry_buffer_new(m_location,-1); //show location
 	gtk_entry_set_buffer(GTK_ENTRY(entry_location),buffer_location);
 	
-		
-	 gtk_box_append(GTK_BOX(box), label_date);
-     gtk_box_append(GTK_BOX(box), label_entry_title);
-     gtk_box_append(GTK_BOX(box), entry_title);
-     gtk_box_append(GTK_BOX(box), label_location);
-     gtk_box_append(GTK_BOX(box), entry_location);
-    
-  g_object_set_data(G_OBJECT(dialog), "entry-title-key",entry_title);
-  g_object_set_data(G_OBJECT(dialog), "entry-location-key",entry_location);
-  
-  
-  g_object_set_data(G_OBJECT(dialog), "dialog-window-key",window); 
+
+	gtk_box_append(GTK_BOX(box), label_date);
+	gtk_box_append(GTK_BOX(box), label_entry_summary);
+	gtk_box_append(GTK_BOX(box), entry_summary);
+	gtk_box_append(GTK_BOX(box), label_location);
+	gtk_box_append(GTK_BOX(box), entry_location);
+
+	g_object_set_data(G_OBJECT(button_update), "dialog-key",dialog);
+
+	g_object_set_data(G_OBJECT(button_update), "entry-summary-key",entry_summary);
+	g_object_set_data(G_OBJECT(button_update), "entry-location-key",entry_location);
+	g_object_set_data(G_OBJECT(button_update), "dialog-window-key",window);
 	
 	
-  //start time spin
-  GtkAdjustment *adjustment_start;
-  adjustment_start = gtk_adjustment_new (8.00, 0.0, 23.59, 1.0, 1.0, 0.0);
-  //start time spin
-  label_start_time =gtk_label_new("Start Time (24 hour) "); 
-  spin_button_start_time = gtk_spin_button_new (adjustment_start, 1.0, 2); 
-  gtk_spin_button_set_value(GTK_SPIN_BUTTON(spin_button_start_time),e.start_time);	 
-  box_start_time=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,1);
-  gtk_box_append (GTK_BOX(box_start_time),label_start_time);
-  gtk_box_append (GTK_BOX(box_start_time),spin_button_start_time);  
-  gtk_box_append(GTK_BOX(box), box_start_time);
-  g_object_set_data(G_OBJECT(dialog), "spin-start-time-key",spin_button_start_time); 
-  
-  //end time spin
-   GtkAdjustment *adjustment_end;
-  //value,lower,upper,step_increment,page_increment,page_size
-  adjustment_end = gtk_adjustment_new (8.00, 0.0, 23.59, 1.0, 1.0, 0.0);
-  label_end_time =gtk_label_new("End Time (24 hour) ");
-  spin_button_end_time = gtk_spin_button_new (adjustment_end, 1.0, 2); 
-  gtk_spin_button_set_value(GTK_SPIN_BUTTON(spin_button_end_time),e.end_time);	 
-  box_end_time=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,1);
-  gtk_box_append (GTK_BOX(box_end_time),label_end_time);
-  gtk_box_append (GTK_BOX(box_end_time),spin_button_end_time);  
-  gtk_box_append(GTK_BOX(box), box_end_time);
-  g_object_set_data(G_OBJECT(dialog), "spin-end-time-key",spin_button_end_time);  
-    
-  //check buttons 
-  check_button_allday = gtk_check_button_new_with_label ("Is All Day");
-  gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_allday), e.is_allday);  
-  
-  g_object_set_data(G_OBJECT(check_button_allday), "cb_allday_spin_start_time_key",spin_button_start_time);
-  g_object_set_data(G_OBJECT(check_button_allday), "cb_allday_spin_end_time_key",spin_button_end_time); 
-  
-  g_signal_connect_swapped (GTK_CHECK_BUTTON(check_button_allday), "toggled", 
-  G_CALLBACK (callbk_check_button_allday_toggled), check_button_allday);
-  
-  if(e.is_allday) {
-  gtk_widget_set_sensitive(spin_button_start_time,FALSE);	   
-  gtk_widget_set_sensitive(spin_button_end_time,FALSE);	    
-  }
-  else {
-  gtk_widget_set_sensitive(spin_button_start_time,TRUE);		
-  gtk_widget_set_sensitive(spin_button_end_time,TRUE);		
-  }
-    
-  check_button_isyearly = gtk_check_button_new_with_label("Is Yearly");
-  check_button_priority = gtk_check_button_new_with_label ("Is High Priority");
-  gtk_box_append(GTK_BOX(box), check_button_allday);
-  gtk_box_append(GTK_BOX(box), check_button_isyearly);
-  gtk_box_append(GTK_BOX(box), check_button_priority);
-  
-  gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_isyearly), e.is_yearly);
-  
-  gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_priority), e.priority);
+	//start time spin
+	GtkAdjustment *adjustment_start;
+	adjustment_start = gtk_adjustment_new (8.00, 0.0, 23.59, 1.0, 1.0, 0.0);
+	//start time spin
+	label_start_time =gtk_label_new("Start Time (24 hour) ");
+	spin_button_start_time = gtk_spin_button_new (adjustment_start, 1.0, 2);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(spin_button_start_time),e.start_time);
+	box_start_time=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,1);
+	gtk_box_append (GTK_BOX(box_start_time),label_start_time);
+	gtk_box_append (GTK_BOX(box_start_time),spin_button_start_time);
+	gtk_box_append(GTK_BOX(box), box_start_time);
+
+	g_object_set_data(G_OBJECT(button_update), "spin-start-time-key",spin_button_start_time);
+
+	//end time spin
+	GtkAdjustment *adjustment_end;
+	//value,lower,upper,step_increment,page_increment,page_size
+	adjustment_end = gtk_adjustment_new (8.00, 0.0, 23.59, 1.0, 1.0, 0.0);
+	label_end_time =gtk_label_new("End Time (24 hour) ");
+	spin_button_end_time = gtk_spin_button_new (adjustment_end, 1.0, 2);
+	gtk_spin_button_set_value(GTK_SPIN_BUTTON(spin_button_end_time),e.end_time);
+	box_end_time=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,1);
+
+	gtk_box_append (GTK_BOX(box_end_time),label_end_time);
+	gtk_box_append (GTK_BOX(box_end_time),spin_button_end_time);
+	gtk_box_append(GTK_BOX(box), box_end_time);
+
+	g_object_set_data(G_OBJECT(button_update), "spin-end-time-key",spin_button_end_time);
+
+	//check buttons
+	check_button_allday = gtk_check_button_new_with_label ("Is All Day");
+	gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_allday), e.is_allday);
+
+	g_object_set_data(G_OBJECT(check_button_allday), "cb_allday_spin_start_time_key",spin_button_start_time);
+	g_object_set_data(G_OBJECT(check_button_allday), "cb_allday_spin_end_time_key",spin_button_end_time);
+
+	g_signal_connect_swapped (GTK_CHECK_BUTTON(check_button_allday), "toggled",
+							  G_CALLBACK (callbk_check_button_allday_toggled), check_button_allday);
+
+	if(e.is_allday) {
+		gtk_widget_set_sensitive(spin_button_start_time,FALSE);
+		gtk_widget_set_sensitive(spin_button_end_time,FALSE);
+	}
+	else {
+		gtk_widget_set_sensitive(spin_button_start_time,TRUE);
+		gtk_widget_set_sensitive(spin_button_end_time,TRUE);
+	}
+
+	check_button_isyearly = gtk_check_button_new_with_label("Is Yearly");
+	check_button_priority = gtk_check_button_new_with_label ("Is High Priority");
+	gtk_box_append(GTK_BOX(box), check_button_allday);
+	gtk_box_append(GTK_BOX(box), check_button_isyearly);
+	gtk_box_append(GTK_BOX(box), check_button_priority);
+	gtk_box_append(GTK_BOX(box), button_update);
+
+	gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_isyearly), e.is_yearly);
+
+	gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_priority), e.priority);
 	
-  g_object_set_data(G_OBJECT(dialog), "check-button-allday-key",check_button_allday);
-  g_object_set_data(G_OBJECT(dialog), "check-button-isyearly-key",check_button_isyearly);
-  g_object_set_data(G_OBJECT(dialog), "check-button-priority-key",check_button_priority);
-    
-   set_widget_font_size(dialog);
-  g_signal_connect (dialog, "response", G_CALLBACK (callbk_edit_event_response),window);
-  
-  gtk_window_present (GTK_WINDOW (dialog)); 
+	g_object_set_data(G_OBJECT(button_update), "check-button-allday-key",check_button_allday);
+	g_object_set_data(G_OBJECT(button_update), "check-button-isyearly-key",check_button_isyearly);
+	g_object_set_data(G_OBJECT(button_update), "check-button-priority-key",check_button_priority);
+
+	//set_widget_font_size(dialog);
+	//g_signal_connect (dialog, "response", G_CALLBACK (callbk_edit_event_response),window);
+
+	gtk_window_present (GTK_WINDOW (dialog));
 
 }
 
@@ -2754,18 +2137,18 @@ static void callbk_delete_selected(GtkButton *button, gpointer  user_data){
 	//remove event from db  
 	int j=0;
 	Event e;
-	for(int i=0; i<m_db_size; i++)
+	for(int i=0; i<m_store_size; i++)
 	{
-	e=db_store[i];      
+	e=event_store[i];
 	if(e.id==m_id_selection){
 	continue;
 	}
-	db_store[j] = db_store[i];
+	event_store[j] = event_store[i];
 	j++;
 	}
 	
 	////Decrement db size
-	m_db_size=m_db_size-1;
+	m_store_size=m_store_size-1;
 	
 	g_list_store_remove (m_store, m_row_index); //remove selected
 	update_calendar(GTK_WINDOW(window));
@@ -2774,7 +2157,7 @@ static void callbk_delete_selected(GtkButton *button, gpointer  user_data){
 }
 
 //----------------------------------------------------------------------
-// flat csv database functions
+//  csv file storage functions
 //----------------------------------------------------------------------
 
 int break_fields(char *s, char** data, int n)
@@ -2848,10 +2231,10 @@ void load_csv_file(){
 		for (int j=0; j<field_num;j++) {
 			
 			
-			if (j==0) e.id =m_db_size; 
-			if (j==1) strcpy(e.title,data[j]);
+			if (j==0) e.id =m_store_size;
+			if (j==1) strcpy(e.summary,data[j]);
 			if (j==2) strcpy(e.location,data[j]);
-			if (j==3) strcpy(e.type,data[j]);
+			if (j==3) strcpy(e.description,data[j]);
 			if (j==4) e.year=atoi(data[j]);
 			if (j==5) e.month=atoi(data[j]);
 			if (j==6) e.day=atoi(data[j]);				          
@@ -2868,9 +2251,9 @@ void load_csv_file(){
 			
 		}
 		
-		db_store[m_db_size] =e;			
-		m_db_size=m_db_size+1;		
-		if(m_db_size>max_records)
+		event_store[m_store_size] =e;
+		m_store_size=m_store_size+1;
+		if(m_store_size>max_records)
 		{
 			g_print("Error: max number of records exceeded\n");
 			exit(1);
@@ -2900,18 +2283,18 @@ void save_csv_file(){
 	
 	if (file_stream == NULL) {
 		g_object_unref (file);
-		g_print("error: unable to open abd save database file\n");
+		g_print("error: unable to open and save database file\n");
 		return;
 	}
 
 	data_stream = g_data_output_stream_new (G_OUTPUT_STREAM (file_stream));
 	
 	
-	for (int i=0; i<m_db_size; i++)
+	for (int i=0; i<m_store_size; i++)
 	{
 	char *line="";  
 	Event e;
-	e=db_store[i];     
+	e=event_store[i];
 	
 	gchar *id_str = g_strdup_printf("%d", e.id); 
 	gchar *year_str = g_strdup_printf("%d", e.year); 
@@ -2928,9 +2311,9 @@ void save_csv_file(){
 	
 	line =g_strconcat(line,
 	id_str,",",
-	e.title,",",
+	e.summary,",",
 	e.location,",",
-	e.type,",",
+	e.description,",",
 	year_str,",",
 	month_str,",",
 	day_str,",",
@@ -2951,8 +2334,6 @@ void save_csv_file(){
 }
  
 
-
-
 //----------------------------------------------------------------------
 
 static void callbk_day_selected (GtkButton *button, gpointer user_data)
@@ -2969,6 +2350,33 @@ static void callbk_day_selected (GtkButton *button, gpointer user_data)
   update_calendar(GTK_WINDOW(window)); 
   update_store(m_year,m_month,m_day);
 }
+
+static void callbk_next_year(GtkButton *button, gpointer user_data)
+{
+
+	GtkWindow *window = user_data;
+
+	m_month=m_month;
+	m_day=1;
+	m_year =m_year+1;
+	m_id_selection=-1;
+	m_row_index=-1;
+	update_calendar(GTK_WINDOW (window));
+}
+
+static void callbk_prev_year(GtkButton *button, gpointer user_data)
+{
+
+	GtkWindow *window = user_data;
+	m_month=m_month;
+	m_day =1;
+	m_year=m_year-1;
+	m_id_selection=-1;
+	m_row_index=-1;
+	update_calendar(GTK_WINDOW (window));
+
+}
+
 
 static void callbk_next_month(GtkButton *button, gpointer user_data)
 {
@@ -3046,16 +2454,16 @@ static void update_store(int year, int month, int day) {
  
   Event e; 
   int start_time=0; 
-  for (int i=0; i<m_db_size; i++)
+  for (int i=0; i<m_store_size; i++)
   {
-  e=db_store[i]; 
+  e=event_store[i];
  
   if ((year==e.year && month ==e.month && day==e.day) || (e.is_yearly && month==e.month && day==e.day))
   {  
   
   DisplayObject *obj; 
   char *time_str="";
-  char *title_str="";
+  char *summary_str="";
   char* starthour_str="";
   char *startmin_str="";
   char* endhour_str="";
@@ -3107,13 +2515,13 @@ static void update_store(int year, int month, int day) {
   }
     
   char *display_str ="";
-  title_str=e.title;  
+  summary_str=e.summary;
   if(strlen(e.location) ==0)
   {
-	display_str = g_strconcat(display_str,time_str,title_str,".\n", NULL);  
+	display_str = g_strconcat(display_str,time_str,summary_str,".\n", NULL);
   }
   else { 
-   display_str = g_strconcat(display_str,time_str,title_str, " ",e.location, ".", NULL);
+   display_str = g_strconcat(display_str,time_str,summary_str, " ",e.location, ".", NULL);
   }
   
   if(e.priority) {	  
@@ -3162,9 +2570,9 @@ static void update_marked_dates(int month, int year) {
   //reset marked dates 
   num_marked_dates = 0;  
   Event e;  
-  for (int i=0; i<m_db_size; i++)
+  for (int i=0; i<m_store_size; i++)
   {
-  e=db_store[i];  
+  e=event_store[i];
   if ((e.month==month && e.year ==year)  || (e.is_yearly && month==e.month))  
   {
 	  marked_date[e.day-1]=TRUE; //zero index so 1=0
@@ -3187,9 +2595,9 @@ static void update_priority_dates(int month, int year) {
   //reset marked dates 
   num_priority_dates = 0;  
   Event e;  
-  for (int i=0; i<m_db_size; i++)
+  for (int i=0; i<m_store_size; i++)
   {
-  e=db_store[i];  
+  e=event_store[i];
   if ((e.month==month && e.year ==year && e.priority==1)  || (e.is_yearly && month==e.month && e.priority==1))  
   {
 	  priority_date[e.day-1]=TRUE; //zero index so 1=0
@@ -3224,7 +2632,7 @@ static void callbk_about(GSimpleAction * action, GVariant *parameter, gpointer u
 	gtk_widget_set_size_request(about_dialog, 200,200);
     gtk_window_set_modal(GTK_WINDOW(about_dialog),TRUE);	
 	gtk_about_dialog_set_program_name(GTK_ABOUT_DIALOG(about_dialog), "Tiki Calendar (Gtk4 version)");
-	gtk_about_dialog_set_version (GTK_ABOUT_DIALOG(about_dialog), "Version 0.1.1");
+	gtk_about_dialog_set_version (GTK_ABOUT_DIALOG(about_dialog), "Version 0.2.0");
 	gtk_about_dialog_set_copyright(GTK_ABOUT_DIALOG(about_dialog),"Copyright © 2023");
 	gtk_about_dialog_set_comments(GTK_ABOUT_DIALOG(about_dialog),"Personal calendar"); 
 	gtk_about_dialog_set_license_type (GTK_ABOUT_DIALOG(about_dialog), GTK_LICENSE_GPL_2_0);
@@ -3234,78 +2642,77 @@ static void callbk_about(GSimpleAction * action, GVariant *parameter, gpointer u
 		
 	gtk_about_dialog_set_logo_icon_name(GTK_ABOUT_DIALOG(about_dialog), "x-office-calendar");
 	
-	set_widget_font_size(about_dialog);
+	//set_widget_font_size(about_dialog);
 	gtk_widget_show(about_dialog);	
 		
 }
 
 //-----------------------------------------------------------------------------------
-// Talk Options
+// Preferences
 //----------------------------------------------------------------------------------
 
-void callbk_talkoptions_response(GtkDialog *dialog, gint response_id,  gpointer  user_data)
-{
-	if(!GTK_IS_DIALOG(dialog)) { 
-	g_print("talkoptions Response: not a dialog\n");	
-	return;
-	}
-	
+static void callbk_set(GtkButton *button, gpointer  user_data){
+
 	GtkWidget *window = user_data;
-	
-	//checks
-	GtkWidget *check_button_talk= g_object_get_data(G_OBJECT(dialog), "check-button-talk-key"); 
-    GtkWidget *check_button_talk_startup= g_object_get_data(G_OBJECT(dialog), "check-button-talk-startup-key"); 
-    GtkWidget *check_button_talk_event_number= g_object_get_data(G_OBJECT(dialog), "check-button-talk-event-number-key");
-    GtkWidget *check_button_talk_times= g_object_get_data(G_OBJECT(dialog), "check-button-talk-times-key");
-    GtkWidget *check_button_talk_tags= g_object_get_data(G_OBJECT(dialog), "check-button-talk-tags-key");
-    //GtkWidget *check_button_talk_priority= g_object_get_data(G_OBJECT(dialog), "check-button-talk-priority-key");
-    //GtkWidget *check_button_talk_overlap= g_object_get_data(G_OBJECT(dialog), "check-button-talk-overlap-key");
-    GtkWidget *check_button_reset_all= g_object_get_data(G_OBJECT(dialog), "check-button-reset-all-key");
-    
-   
-    if(response_id==GTK_RESPONSE_OK)
-	{
+	GtkWidget *dialog = g_object_get_data(G_OBJECT(button), "dialog-key");
+
+	//calendar
+	GtkWidget *check_button_calendar_grid= g_object_get_data(G_OBJECT(button), "check-button-grid-key");
+	GtkWidget *check_button_end_time= g_object_get_data(G_OBJECT(button), "check-button-end-time-key");
+
+
+	//talking
+	GtkWidget *check_button_talk= g_object_get_data(G_OBJECT(button), "check-button-talk-key");
+    GtkWidget *check_button_talk_startup= g_object_get_data(G_OBJECT(button), "check-button-talk-startup-key");
+    GtkWidget *check_button_talk_event_number= g_object_get_data(G_OBJECT(button), "check-button-talk-event-number-key");
+    GtkWidget *check_button_talk_times= g_object_get_data(G_OBJECT(button), "check-button-talk-times-key");
+    GtkWidget *check_button_talk_tags= g_object_get_data(G_OBJECT(button), "check-button-talk-tags-key");
+    GtkWidget *check_button_talk_priority= g_object_get_data(G_OBJECT(button), "check-button-talk-priority-key");
+    //GtkWidget *check_button_talk_overlap= g_object_get_data(G_OBJECT(button), "check-button-talk-overlap-key");
+    GtkWidget *check_button_reset_all= g_object_get_data(G_OBJECT(button), "check-button-reset-all-key");
+
+
+	m_show_end_time=gtk_check_button_get_active (GTK_CHECK_BUTTON(check_button_end_time));
+	m_frame=gtk_check_button_get_active (GTK_CHECK_BUTTON(check_button_calendar_grid));
+
+
 	m_talk=gtk_check_button_get_active (GTK_CHECK_BUTTON(check_button_talk));
 	m_talk_at_startup=gtk_check_button_get_active (GTK_CHECK_BUTTON(check_button_talk_startup));
 	m_talk_event_number=gtk_check_button_get_active (GTK_CHECK_BUTTON(check_button_talk_event_number));
 	m_talk_time=gtk_check_button_get_active(GTK_CHECK_BUTTON(check_button_talk_times));
 	m_talk_tags=gtk_check_button_get_active(GTK_CHECK_BUTTON(check_button_talk_tags));
-	//m_talk_priority=gtk_check_button_get_active(GTK_CHECK_BUTTON(check_button_talk_priority));
+	m_talk_priority=gtk_check_button_get_active(GTK_CHECK_BUTTON(check_button_talk_priority));
 	//m_talk_overlap=gtk_check_button_get_active(GTK_CHECK_BUTTON(check_button_talk_overlap));
-		
-	
+
 	m_talk_reset=gtk_check_button_get_active(GTK_CHECK_BUTTON(check_button_reset_all));
-	
+
 	if(m_talk_reset) {
-	//reset everything 
-	m_talk = 1;	
+	//reset everything
+	m_talk = 1;
 	m_talk_at_startup=1;
 	m_talk_event_number=1;
 	m_talk_time=1;
 	m_talk_tags=1;
-	m_talk_priority=0;	
-	m_talk_overlap=0;	
+	m_frame=0;
+	m_show_end_time=0;
+	m_talk_priority=0;
+	m_talk_overlap=0;	//todo
     m_talk_reset=0; //toggle
-		
+
 	}
-	
-	config_write();	
+
+	config_write();
 	//set_widget_font_size(dialog);
 	update_calendar(GTK_WINDOW(window));
 	update_store(m_year,m_month,m_day);
 	update_header(GTK_WINDOW(window));
 	gtk_window_destroy(GTK_WINDOW(dialog));
-	
-	}	
-	gtk_window_destroy(GTK_WINDOW(dialog));	
-    
-	
 }
 
 //---------------------------------------------------------------------
-// callback Talk Options
+// callback preferences
 //---------------------------------------------------------------------
-static void callbk_talkoptions(GSimpleAction* action, GVariant *parameter,gpointer user_data)
+static void callbk_preferences(GSimpleAction* action, GVariant *parameter,gpointer user_data)
 {
 	//g_print("Talk options\n");
 	
@@ -3317,35 +2724,47 @@ static void callbk_talkoptions(GSimpleAction* action, GVariant *parameter,gpoint
 	
 	//Check buttons
 	GtkWidget *check_button_talk;	
-	GtkWidget *check_button_talk_startup;		
+	GtkWidget *check_button_talk_startup;
+	GtkWidget *check_button_talk_event_number;
 	GtkWidget *check_button_talk_times;
 	GtkWidget *check_button_talk_tags;
+
 	GtkWidget *check_button_talk_priority;
-	GtkWidget *check_button_talk_event_number;
-	GtkWidget *check_button_talk_overlap;
+	//GtkWidget *check_button_talk_overlap; //todo
+
+	GtkWidget *check_button_calendar_grid;
+	GtkWidget *check_button_end_time;
 	
 	GtkWidget *check_button_reset_all;
+
+	GtkWidget *button_set;
+
+	dialog =gtk_window_new(); //gtk_dialog_new_with_buttons to be deprecated gtk4.10
 	
-	
-	dialog = gtk_dialog_new_with_buttons ("Talk Options", GTK_WINDOW(window),   
-	GTK_DIALOG_MODAL|GTK_DIALOG_DESTROY_WITH_PARENT|GTK_DIALOG_USE_HEADER_BAR,
-	"OK", GTK_RESPONSE_OK, "Cancel", GTK_RESPONSE_CANCEL, NULL);
-	
-	gtk_window_set_title (GTK_WINDOW (dialog), "Talk Options");
+	gtk_window_set_title (GTK_WINDOW (dialog), "Preferences");
 	gtk_window_set_default_size(GTK_WINDOW(dialog),350,100);  
 	
 	box =gtk_box_new(GTK_ORIENTATION_VERTICAL,1);  
 	gtk_window_set_child (GTK_WINDOW (dialog), box);
+
+	button_set = gtk_button_new_with_label ("Set Preferences");
+	g_signal_connect (button_set, "clicked", G_CALLBACK (callbk_set), window);
 	
+	check_button_calendar_grid= gtk_check_button_new_with_label ("Calendar Grid");
+	check_button_end_time= gtk_check_button_new_with_label ("Show End Time");
+
 	check_button_talk = gtk_check_button_new_with_label ("Talk");
 	check_button_talk_startup = gtk_check_button_new_with_label ("Talk At Startup");
 	check_button_talk_event_number = gtk_check_button_new_with_label ("Talk Event Number");
 	check_button_talk_times = gtk_check_button_new_with_label ("Talk Time");
 	check_button_talk_tags = gtk_check_button_new_with_label ("Use Speech Tags");
-	//check_button_talk_priority = gtk_check_button_new_with_label ("Talk Priority");
+	check_button_talk_priority = gtk_check_button_new_with_label ("Talk Priority");
 	//check_button_talk_overlap = gtk_check_button_new_with_label ("Overlap Alert");
 	check_button_reset_all = gtk_check_button_new_with_label ("Reset All");
-		
+
+	gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_calendar_grid), m_frame);
+	gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_end_time), m_show_end_time);
+
 	
 	gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_talk), m_talk);
 	gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_talk_startup), m_talk_at_startup);
@@ -3353,500 +2772,41 @@ static void callbk_talkoptions(GSimpleAction* action, GVariant *parameter,gpoint
 	gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_talk_tags), m_talk_tags);
 
 	gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_talk_event_number), m_talk_event_number);
-	//gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_talk_priority), m_talk_priority);
+	gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_talk_priority), m_talk_priority);
 	//gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_talk_overlap), m_talk_overlap);
 	gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_reset_all), m_talk_reset);
 	
-	g_object_set_data(G_OBJECT(dialog), "check-button-talk-key",check_button_talk);
-	g_object_set_data(G_OBJECT(dialog), "check-button-talk-startup-key",check_button_talk_startup);	
-	g_object_set_data(G_OBJECT(dialog), "check-button-talk-times-key",check_button_talk_times);
-	g_object_set_data(G_OBJECT(dialog), "check-button-talk-tags-key",check_button_talk_tags);
-	g_object_set_data(G_OBJECT(dialog), "check-button-talk-event-number-key",check_button_talk_event_number);
-	//g_object_set_data(G_OBJECT(dialog), "check-button-talk-priority-key",check_button_talk_priority);
+	g_object_set_data(G_OBJECT(button_set), "dialog-key",dialog);
+
+	g_object_set_data(G_OBJECT(button_set), "check-button-grid-key",check_button_calendar_grid);
+	g_object_set_data(G_OBJECT(button_set), "check-button-end-time-key",check_button_end_time);
+
+	g_object_set_data(G_OBJECT(button_set), "check-button-talk-key",check_button_talk);
+	g_object_set_data(G_OBJECT(button_set), "check-button-talk-startup-key",check_button_talk_startup);
+	g_object_set_data(G_OBJECT(button_set), "check-button-talk-times-key",check_button_talk_times);
+	g_object_set_data(G_OBJECT(button_set), "check-button-talk-tags-key",check_button_talk_tags);
+	g_object_set_data(G_OBJECT(button_set), "check-button-talk-event-number-key",check_button_talk_event_number);
+	g_object_set_data(G_OBJECT(button_set), "check-button-talk-priority-key",check_button_talk_priority);
 	//g_object_set_data(G_OBJECT(dialog), "check-button-talk-overlap-key",check_button_talk_overlap);
 		
-	g_object_set_data(G_OBJECT(dialog), "check-button-reset-all-key",check_button_reset_all);
+	g_object_set_data(G_OBJECT(button_set), "check-button-reset-all-key",check_button_reset_all);
 	
-	
+	gtk_box_append(GTK_BOX(box), check_button_end_time);
+	gtk_box_append(GTK_BOX(box), check_button_calendar_grid);
 
 	gtk_box_append(GTK_BOX(box), check_button_talk);
 	gtk_box_append(GTK_BOX(box), check_button_talk_startup);
 	gtk_box_append(GTK_BOX(box), check_button_talk_event_number);
 	gtk_box_append(GTK_BOX(box), check_button_talk_times);
 	gtk_box_append(GTK_BOX(box), check_button_talk_tags);
-	//gtk_box_append(GTK_BOX(box), check_button_talk_priority);
-	//gtk_box_append(GTK_BOX(box), check_button_talk_overlap);
+	gtk_box_append(GTK_BOX(box), check_button_talk_priority);
+	//gtk_box_append(GTK_BOX(box), check_button_talk_overlap); //todo
 	gtk_box_append(GTK_BOX(box), check_button_reset_all);
-	
-	
-	set_widget_font_size(dialog);		
-	g_signal_connect (dialog, "response", G_CALLBACK (callbk_talkoptions_response),window);
-	
+	gtk_box_append(GTK_BOX(box), button_set);
+
 	gtk_window_present (GTK_WINDOW (dialog)); 	
 	
 	
-}
-
-//----------------------------------------------------------------
-// Calendar options
-//-----------------------------------------------------------------
-
-void callbk_calendar_options_response(GtkDialog *dialog, gint response_id,  gpointer  user_data)
-{
-	g_print("Calendar Options Response\n");
-	
-	GtkWidget *check_button_holidays= g_object_get_data(G_OBJECT(dialog), "check-button-holidays-key");
-    GtkWidget *check_button_end_time= g_object_get_data(G_OBJECT(dialog), "check-button-display-end-time-key");
-    GtkWidget *check_button_adwaita_icons= g_object_get_data(G_OBJECT(dialog), "check-button-adwaita-icons-key");
-    GtkWidget *check_button_startup_notification= g_object_get_data(G_OBJECT(dialog), "check-button-startup-notification-key");
-    
-	
-	GtkWidget *check_button_today_border= g_object_get_data(G_OBJECT(dialog), "check-button-today-border"); 
-	GtkWidget *check_button_event_border= g_object_get_data(G_OBJECT(dialog), "check-button-event-border"); 
-	GtkWidget *check_button_holiday_border= g_object_get_data(G_OBJECT(dialog), "check-button-holiday-border"); 
-	GtkWidget *check_button_priority_border= g_object_get_data(G_OBJECT(dialog), "check-button-priority-border"); 
-	
-	GtkWidget *check_button_reset= g_object_get_data(G_OBJECT(dialog), "check-button-reset"); 
-	
-	GtkWidget *colour_button_today= g_object_get_data(G_OBJECT(dialog), "colour-button-today-key"); 
-	GtkWidget *colour_button_today_bg= g_object_get_data(G_OBJECT(dialog), "colour-button-today-bg-key"); 
-	
-	GtkWidget *colour_button_event= g_object_get_data(G_OBJECT(dialog), "colour-button-event-key"); 
-	GtkWidget *colour_button_event_bg= g_object_get_data(G_OBJECT(dialog), "colour-button-event-bg-key"); 
-	
-	GtkWidget *colour_button_holiday= g_object_get_data(G_OBJECT(dialog), "colour-button-holiday-key");
-	GtkWidget *colour_button_holiday_bg= g_object_get_data(G_OBJECT(dialog), "colour-button-holiday-bg-key"); 
-	
-    GtkWidget *colour_button_priority= g_object_get_data(G_OBJECT(dialog), "colour-button-priority-key");
-	GtkWidget *colour_button_priority_bg= g_object_get_data(G_OBJECT(dialog), "colour-button-priority-bg-key"); 
-	
-	GtkWidget *spin_button_font_size= g_object_get_data(G_OBJECT(dialog), "spin-font-size-key");  
-	
-  	
-	if(!GTK_IS_DIALOG(dialog)) { 
-	g_print("Calendar Options Response: not a dialog\n");	
-	return;
-	}
-	
-	GtkWidget *window = user_data;
-	
-	if(response_id==GTK_RESPONSE_OK)
-	{
-	
-	m_holidays=gtk_check_button_get_active(GTK_CHECK_BUTTON(check_button_holidays));
-	m_show_end_time=gtk_check_button_get_active(GTK_CHECK_BUTTON(check_button_end_time));
-	m_use_adwaita_icons=gtk_check_button_get_active(GTK_CHECK_BUTTON(check_button_adwaita_icons));
-	m_startup_notification=gtk_check_button_get_active(GTK_CHECK_BUTTON(check_button_startup_notification));	
-	
-	m_font_size =gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(spin_button_font_size));
-	
-	
-	m_today_frame=gtk_check_button_get_active (GTK_CHECK_BUTTON(check_button_today_border));
-	m_event_frame=gtk_check_button_get_active (GTK_CHECK_BUTTON(check_button_event_border));
-	m_holiday_frame=gtk_check_button_get_active (GTK_CHECK_BUTTON(check_button_holiday_border));
-	m_priority_frame=gtk_check_button_get_active (GTK_CHECK_BUTTON(check_button_priority_border));
-	//Today
-	GdkRGBA rgba_today;
-    gtk_color_chooser_get_rgba (GTK_COLOR_CHOOSER (colour_button_today), &rgba_today);
-	m_today_red=rgba_today.red;
-	m_today_green=rgba_today.green;
-	m_today_blue=rgba_today.blue; 
-	
-	GdkRGBA rgba_today_bg;
-    gtk_color_chooser_get_rgba (GTK_COLOR_CHOOSER (colour_button_today_bg), &rgba_today_bg);
-	m_today_bg_red=rgba_today_bg.red;
-	m_today_bg_green=rgba_today_bg.green;
-	m_today_bg_blue=rgba_today_bg.blue;  
-	
-	//Event
-	GdkRGBA rgba_event;
-    gtk_color_chooser_get_rgba (GTK_COLOR_CHOOSER (colour_button_event), &rgba_event);
-	m_event_red=rgba_event.red;
-	m_event_green=rgba_event.green;
-	m_event_blue=rgba_event.blue; 
-	
-	GdkRGBA rgba_event_bg;
-    gtk_color_chooser_get_rgba (GTK_COLOR_CHOOSER (colour_button_event_bg), &rgba_event_bg);
-	m_event_bg_red=rgba_event_bg.red;
-	m_event_bg_green=rgba_event_bg.green;
-	m_event_bg_blue=rgba_event_bg.blue;  
-	
-	//Holiday
-	GdkRGBA rgba_holiday;
-    gtk_color_chooser_get_rgba (GTK_COLOR_CHOOSER (colour_button_holiday), &rgba_holiday);
-	m_holiday_red=rgba_holiday.red;
-	m_holiday_green=rgba_holiday.green;
-	m_holiday_blue=rgba_holiday.blue; 
-	
-	GdkRGBA rgba_holiday_bg;
-    gtk_color_chooser_get_rgba (GTK_COLOR_CHOOSER (colour_button_holiday_bg), &rgba_holiday_bg);
-	m_holiday_bg_red=rgba_holiday_bg.red;
-	m_holiday_bg_green=rgba_holiday_bg.green;
-	m_holiday_bg_blue=rgba_holiday_bg.blue;  
-	
-	//Priority
-	GdkRGBA rgba_priority;
-    gtk_color_chooser_get_rgba (GTK_COLOR_CHOOSER (colour_button_priority), &rgba_priority);
-	m_priority_red=rgba_priority.red;
-	m_priority_green=rgba_priority.green;
-	m_priority_blue=rgba_priority.blue; 
-	
-	GdkRGBA rgba_priority_bg;
-    gtk_color_chooser_get_rgba (GTK_COLOR_CHOOSER (colour_button_priority_bg), &rgba_priority_bg);
-	m_priority_bg_red=rgba_priority_bg.red;
-	m_priority_bg_green=rgba_priority_bg.green;
-	m_priority_bg_blue=rgba_priority_bg.blue;  
-	
-	   
-   m_colour_reset=gtk_check_button_get_active (GTK_CHECK_BUTTON(check_button_reset));
-   
-   if (m_colour_reset) {
-   //reset everything  
-   m_today_red =0.0;
-   m_today_green =0.0;
-   m_today_blue =0.0;
-   m_today_bg_red =0.59;
-   m_today_bg_green =0.98;
-   m_today_bg_blue =0.59;
-   m_today_frame =1;
-   
-   m_event_red =0.0;
-   m_event_green =0.0;
-   m_event_blue =0.0;
-   m_event_bg_red =1.0;
-   m_event_bg_green =0.8;
-   m_event_bg_blue =0.8;
-   m_event_frame =1;
-   
-   m_holiday_red =0.0;
-   m_holiday_green =0.0;
-   m_holiday_blue =0.0;
-   m_holiday_bg_red =1.0;
-   m_holiday_bg_green =1.0;
-   m_holiday_bg_blue =0.7;
-   m_holiday_frame =1;
-   
-   m_priority_red =0.0;
-   m_priority_green =0.0;
-   m_priority_blue =0.0;
-   m_priority_bg_red =1.0;
-   m_priority_bg_green =0.0;
-   m_priority_bg_blue =0.4;
-   m_priority_frame =1;
-   
-   m_colour_reset =0; 
-   }
-   
-    config_write();		
-	update_calendar(GTK_WINDOW(window));
-	update_store(m_year,m_month,m_day);
-	update_header(GTK_WINDOW(window));
-    
-   gtk_window_destroy(GTK_WINDOW(dialog));		
-   
-   }
-   
-	gtk_window_destroy(GTK_WINDOW(dialog));		
-	
-}
-
-//----------------------------------------------------------------
-// Callback Calendar options
-//-----------------------------------------------------------------
-
-static void callbk_calendar_options(GSimpleAction* action, GVariant *parameter,gpointer user_data){
-  
- GtkWidget *window =user_data;
-	
-	GtkWidget *dialog; 
-	GtkWidget *box; 
-	GtkWidget *box_today; 
-	GtkWidget *box_event;
-	GtkWidget *box_holiday;
-	GtkWidget *box_priority;
-	gint response; 
-	
-	GtkWidget *check_button_holidays;
-	GtkWidget *check_button_end_time;
-	GtkWidget *check_button_startup_notification;
-	GtkWidget *check_button_adwaita_icons;
-	
-	//font size
-	GtkWidget *label_font_size;  
-    GtkWidget *spin_button_font_size;  
-    GtkWidget *box_font_size;
-	
-	
-	//Today colours
-	GtkWidget *label_today_text_colour;
-	GtkWidget *label_today_bg_colour;
-	GtkWidget *colour_button_today;
-	GtkWidget *colour_button_today_bg;
-	
-		
-	//Event colours
-	GtkWidget *label_event_text_colour;
-	GtkWidget *label_event_bg_colour;
-	GtkWidget *colour_button_event;
-	GtkWidget *colour_button_event_bg;
-	
-	//Holiday colours
-	GtkWidget *label_holiday_text_colour;
-	GtkWidget *label_holiday_bg_colour;
-	GtkWidget *colour_button_holiday;
-	GtkWidget *colour_button_holiday_bg;
-	
-	//Priority colours
-	GtkWidget *label_priority_text_colour;
-	GtkWidget *label_priority_bg_colour;
-	GtkWidget *colour_button_priority;
-	GtkWidget *colour_button_priority_bg;
-			
-	
-	GtkWidget *check_button_today_border;
-	GtkWidget *check_button_event_border;
-	GtkWidget *check_button_holiday_border;
-	GtkWidget *check_button_priority_border;
-	
-	GtkWidget *check_button_reset;
-	
-	dialog = gtk_dialog_new_with_buttons ("Calendar Options", GTK_WINDOW(window),   
-	GTK_DIALOG_MODAL|GTK_DIALOG_DESTROY_WITH_PARENT|GTK_DIALOG_USE_HEADER_BAR,
-	"OK", GTK_RESPONSE_OK, "Cancel", GTK_RESPONSE_CANCEL, NULL);
-	
-	gtk_window_set_title (GTK_WINDOW (dialog), "Calendar Options");
-	gtk_window_set_default_size(GTK_WINDOW(dialog),350,100);  
-	
-	box =gtk_box_new(GTK_ORIENTATION_VERTICAL,1);  
-	gtk_window_set_child (GTK_WINDOW (dialog), box);
-	
-	
-	//General options
-	check_button_holidays = gtk_check_button_new_with_label ("Show UK Public Holidays");
-	check_button_end_time = gtk_check_button_new_with_label ("Show End Time");
-	check_button_adwaita_icons = gtk_check_button_new_with_label ("Use Adwaita Button Icons");
-	check_button_startup_notification= gtk_check_button_new_with_label ("Startup Notification");
-	
-	gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_holidays), m_holidays);
-	gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_end_time), m_show_end_time);	
-	gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_adwaita_icons), m_use_adwaita_icons);	
-	gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_startup_notification), m_startup_notification);
-
-	g_object_set_data(G_OBJECT(dialog), "check-button-holidays-key",check_button_holidays);
-	g_object_set_data(G_OBJECT(dialog), "check-button-display-end-time-key",check_button_end_time);
-	g_object_set_data(G_OBJECT(dialog), "check-button-adwaita-icons-key",check_button_adwaita_icons);
-	g_object_set_data(G_OBJECT(dialog), "check-button-startup-notification-key",check_button_startup_notification);
-	
-	//Font size
-	
-	GtkAdjustment *adjustment;
-	
-	adjustment = gtk_adjustment_new (14.00, 8.0, 30.0, 1.0, 1.0, 0.0);
-	spin_button_font_size = gtk_spin_button_new (adjustment, 1.0, 0);      
-	gtk_spin_button_set_value(GTK_SPIN_BUTTON(spin_button_font_size),m_font_size);
-	gtk_spin_button_set_numeric(GTK_SPIN_BUTTON(spin_button_font_size),TRUE);		
-	label_font_size =gtk_label_new("Font Size: "); 
-	
-	box_font_size=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,1);
-	gtk_box_append (GTK_BOX(box_font_size),label_font_size);
-	gtk_box_append (GTK_BOX(box_font_size),spin_button_font_size);  
-	g_object_set_data(G_OBJECT(dialog), "spin-font-size-key",spin_button_font_size); 
-		
-	//-----------------------------------------------------------------
-	// Colour Borders
-	//-----------------------------------------------------------------
-	check_button_today_border = gtk_check_button_new_with_label ("Today Border");
-	gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_today_border), m_today_frame);
-	g_object_set_data(G_OBJECT(dialog), "check-button-today-border",check_button_today_border);
-	
-	check_button_event_border = gtk_check_button_new_with_label ("Event Border");
-	gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_event_border), m_event_frame);
-	g_object_set_data(G_OBJECT(dialog), "check-button-event-border",check_button_event_border);
-	
-	check_button_holiday_border = gtk_check_button_new_with_label ("Holiday Border");
-	gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_holiday_border), m_holiday_frame);
-	g_object_set_data(G_OBJECT(dialog), "check-button-holiday-border",check_button_holiday_border);
-	
-	check_button_priority_border = gtk_check_button_new_with_label ("Priority Border");
-	gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_priority_border), m_priority_frame);
-	g_object_set_data(G_OBJECT(dialog), "check-button-priority-border",check_button_priority_border);
-	
-		
-	//--------------------------------------------------------------
-	// Today
-	//--------------------------------------------------------------
-	label_today_text_colour =gtk_label_new("Today Colour:");
-	label_today_bg_colour =gtk_label_new("Background:");
-			
-	GdkRGBA rgba_color;
-	rgba_color.red=m_today_red;
-	rgba_color.green=m_today_green;
-	rgba_color.blue=m_today_blue;
-	rgba_color.alpha=1.0;	
-	colour_button_today =gtk_color_button_new_with_rgba(&rgba_color);
-	gtk_color_button_set_title(GTK_COLOR_BUTTON(colour_button_today), "Pick Today Colour");
-		
-	rgba_color.red=m_today_bg_red;
-	rgba_color.green=m_today_bg_green;
-	rgba_color.blue=m_today_bg_blue;
-	rgba_color.alpha=1.0;
-	colour_button_today_bg =gtk_color_button_new_with_rgba(&rgba_color);	
-	gtk_color_button_set_title(GTK_COLOR_BUTTON(colour_button_today_bg), "Pick Today Background Colour");
-		
-	box_today=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,1);
-	
-	gtk_box_append (GTK_BOX(box_today),label_today_text_colour);
-	gtk_box_append (GTK_BOX(box_today),colour_button_today);  
-	gtk_box_append (GTK_BOX(box_today),label_today_bg_colour);
-	gtk_box_append (GTK_BOX(box_today),colour_button_today_bg);
-	gtk_box_append (GTK_BOX(box_today),check_button_today_border);
-	
-	gtk_box_set_homogeneous(GTK_BOX(box_today),1);
-	gtk_box_set_spacing(GTK_BOX(box_today),3);   
-	
-	g_object_set_data(G_OBJECT(dialog), "colour-button-today-key",colour_button_today);
-	g_object_set_data(G_OBJECT(dialog), "colour-button-today-bg-key",colour_button_today_bg);
-		
-	//--------------------------------------------------------------
-	// Event
-	//--------------------------------------------------------------
-	label_event_text_colour =gtk_label_new("Event Colour:");
-	label_event_bg_colour =gtk_label_new("Background:");
-	
-	rgba_color.red=m_event_red;
-	rgba_color.green=m_event_green;
-	rgba_color.blue=m_event_blue;
-	rgba_color.alpha=1.0;
-	colour_button_event = gtk_color_button_new_with_rgba(&rgba_color);
-	gtk_color_button_set_title(GTK_COLOR_BUTTON(colour_button_event), "Pick Event Colour");
-	
-	rgba_color.red=m_event_bg_red;
-	rgba_color.green=m_event_bg_green;
-	rgba_color.blue=m_event_bg_blue;
-	rgba_color.alpha=1.0;
-	colour_button_event_bg = gtk_color_button_new_with_rgba(&rgba_color);
-	gtk_color_button_set_title(GTK_COLOR_BUTTON(colour_button_event_bg), "Pick Event Background Colour");
-	 	
-	box_event=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,1);
-	
-	gtk_box_append (GTK_BOX(box_event),label_event_text_colour);
-	gtk_box_append (GTK_BOX(box_event),colour_button_event);  
-	gtk_box_append (GTK_BOX(box_event),label_event_bg_colour);
-	gtk_box_append (GTK_BOX(box_event),colour_button_event_bg);
-	gtk_box_append (GTK_BOX(box_event),check_button_event_border);
-	
-	gtk_box_set_homogeneous(GTK_BOX(box_event),1);
-	gtk_box_set_spacing(GTK_BOX(box_event),3);   
-	
-	g_object_set_data(G_OBJECT(dialog), "colour-button-event-key",colour_button_event);
-	g_object_set_data(G_OBJECT(dialog), "colour-button-event-bg-key",colour_button_event_bg);
-		
-	
-	//--------------------------------------------------------------
-	// Holiday
-	//--------------------------------------------------------------
-	
-	label_holiday_text_colour =gtk_label_new("Holiday Colour:");
-	label_holiday_bg_colour =gtk_label_new("Background:");
-	
-	rgba_color.red=m_holiday_red;
-	rgba_color.green=m_holiday_green;
-	rgba_color.blue=m_holiday_blue;
-	rgba_color.alpha=1.0;	
-	colour_button_holiday = gtk_color_button_new_with_rgba(&rgba_color);
-	gtk_color_button_set_title(GTK_COLOR_BUTTON(colour_button_holiday), "Pick Holiday Colour");
-	
-	
-	rgba_color.red=m_holiday_bg_red;
-	rgba_color.green=m_holiday_bg_green;
-	rgba_color.blue=m_holiday_bg_blue;
-	rgba_color.alpha=1.0;
-	colour_button_holiday_bg = gtk_color_button_new_with_rgba(&rgba_color);
-	
-	gtk_color_button_set_title(GTK_COLOR_BUTTON(colour_button_holiday_bg), "Pick Holiday Background Colour");
-	 	
-	box_holiday=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,1);
-	
-	gtk_box_append (GTK_BOX(box_holiday),label_holiday_text_colour);
-	gtk_box_append (GTK_BOX(box_holiday),colour_button_holiday);  
-	gtk_box_append (GTK_BOX(box_holiday),label_holiday_bg_colour);
-	gtk_box_append (GTK_BOX(box_holiday),colour_button_holiday_bg);
-	gtk_box_append (GTK_BOX(box_holiday),check_button_holiday_border);
-	
-	gtk_box_set_homogeneous(GTK_BOX(box_holiday),1);
-	gtk_box_set_spacing(GTK_BOX(box_holiday),3);   
-	
-	g_object_set_data(G_OBJECT(dialog), "colour-button-holiday-key",colour_button_holiday);
-	g_object_set_data(G_OBJECT(dialog), "colour-button-holiday-bg-key",colour_button_holiday_bg);
-	
-	//--------------------------------------------------------------
-	// Priority
-	//--------------------------------------------------------------
-	
-	label_priority_text_colour =gtk_label_new("Priority Colour:");
-	label_priority_bg_colour =gtk_label_new("Background:");
-	
-	rgba_color.red=m_priority_red;
-	rgba_color.green=m_priority_green;
-	rgba_color.blue=m_priority_blue;
-	rgba_color.alpha=1.0;	
-	colour_button_priority = gtk_color_button_new_with_rgba(&rgba_color);
-	gtk_color_button_set_title(GTK_COLOR_BUTTON(colour_button_priority), "Pick Priority Colour");
-		
-	rgba_color.red=m_priority_bg_red;
-	rgba_color.green=m_priority_bg_green;
-	rgba_color.blue=m_priority_bg_blue;
-	rgba_color.alpha=1.0;
-	colour_button_priority_bg = gtk_color_button_new_with_rgba(&rgba_color);
-	
-	gtk_color_button_set_title(GTK_COLOR_BUTTON(colour_button_priority_bg), "Pick Priority Background Colour");
-		
-	box_priority=gtk_box_new(GTK_ORIENTATION_HORIZONTAL,1);
-	
-	gtk_box_append (GTK_BOX(box_priority),label_priority_text_colour);
-	gtk_box_append (GTK_BOX(box_priority),colour_button_priority);  
-	gtk_box_append (GTK_BOX(box_priority),label_priority_bg_colour);
-	gtk_box_append (GTK_BOX(box_priority),colour_button_priority_bg);
-	gtk_box_append (GTK_BOX(box_priority),check_button_priority_border);
-	
-	gtk_box_set_homogeneous(GTK_BOX(box_priority),1);
-	gtk_box_set_spacing(GTK_BOX(box_priority),3);   
-	
-	g_object_set_data(G_OBJECT(dialog), "colour-button-priority-key",colour_button_priority);
-	g_object_set_data(G_OBJECT(dialog), "colour-button-priority-bg-key",colour_button_priority_bg);
-	
-	//-----------------------------------------------------------------
-	// reset check button
-	//----------------------------------------------------------------	
-	check_button_reset = gtk_check_button_new_with_label ("Reset All Colours");
-	gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_reset), m_colour_reset);
-	g_object_set_data(G_OBJECT(dialog), "check-button-reset",check_button_reset);
-	
-	 
-	//--------------------------------------------------------------
-	// top box
-	//---------------------------------------------------------------
-	
-	
-	gtk_box_append(GTK_BOX(box), check_button_holidays);
-	gtk_box_append(GTK_BOX(box), check_button_end_time);
-	gtk_box_append(GTK_BOX(box), check_button_startup_notification);
-	gtk_box_append(GTK_BOX(box), check_button_adwaita_icons);
-	gtk_box_append(GTK_BOX(box), box_font_size);
-	
-	gtk_box_append(GTK_BOX(box), box_today);	
-	gtk_box_append(GTK_BOX(box), box_event);
-	gtk_box_append(GTK_BOX(box), box_holiday);
-	gtk_box_append(GTK_BOX(box), box_priority);	
-	gtk_box_append(GTK_BOX(box), check_button_reset);
-		gtk_box_set_spacing(GTK_BOX(box),5); 
-	
-	set_widget_font_size(dialog);		
-	g_signal_connect (dialog, "response", G_CALLBACK (callbk_calendar_options_response),window);
-	
-	gtk_window_present (GTK_WINDOW (dialog)); 	
-	
-
 }
 
 
@@ -3864,7 +2824,6 @@ static void callbk_shortcuts(GSimpleAction * action, GVariant *parameter, gpoint
 	//labels 	
 	GtkWidget *label_speak_sc;
 	GtkWidget *label_home_sc;
-	
 	
 	dialog = gtk_dialog_new_with_buttons ("Information", GTK_WINDOW(window), 
 	GTK_DIALOG_MODAL|GTK_DIALOG_DESTROY_WITH_PARENT,
@@ -3901,10 +2860,8 @@ static void callbk_info(GSimpleAction *action, GVariant *parameter,  gpointer us
 	
 	GtkWidget *label_desktop_font;
 	
-	
 	GtkWidget *label_gnome_text_scale;
-	GtkWidget *label_font_size;	
-	
+
 	GtkWidget *label_work_dir;
 	GtkWidget *label_working_dir;
 		
@@ -3921,15 +2878,13 @@ static void callbk_info(GSimpleAction *action, GVariant *parameter,  gpointer us
 	gtk_window_set_child (GTK_WINDOW (dialog), box);
 	
 	char* record_num_str =" Number of records (max 5000) = ";
-	char* n_str = g_strdup_printf("%d", m_db_size);   
+	char* n_str = g_strdup_printf("%d", m_store_size);
 	record_num_str = g_strconcat(record_num_str, n_str,NULL);   
 	label_record_number =gtk_label_new(record_num_str); 
-	
-	
-	settings = g_settings_new ("org.gnome.desktop.interface");	
-	
+
+	settings = g_settings_new ("org.gnome.desktop.interface");
 	gchar* desktop_font_str = g_settings_get_string (settings, "font-name");
-	
+
 	char* desktop_str = "Desktop Font = ";
 	desktop_str =g_strconcat(desktop_str, desktop_font_str,NULL); 	
 	label_desktop_font=gtk_label_new(desktop_str); 
@@ -3940,12 +2895,7 @@ static void callbk_info(GSimpleAction *action, GVariant *parameter,  gpointer us
 	char* font_scale_value_str = g_strdup_printf("%0.2lf", sf);
 	gnome_text_scale_factor=g_strconcat(gnome_text_scale_factor, font_scale_value_str,NULL); 
 	label_gnome_text_scale=gtk_label_new(gnome_text_scale_factor); 
-	
-	char* font_size_str =" Talk Calendar Font size = ";
-	char* font_n_str = g_strdup_printf("%d", m_font_size);   
-	font_size_str = g_strconcat(font_size_str, font_n_str,NULL);   
-	label_font_size =gtk_label_new(font_size_str); 
-		
+
 	char *cur_dir;	
 	cur_dir = g_get_current_dir ();	
 	char* dir_str ="";
@@ -3955,14 +2905,12 @@ static void callbk_info(GSimpleAction *action, GVariant *parameter,  gpointer us
 	//g_print("current directory = %s\n", cur_dir);
 	
 	gtk_box_append(GTK_BOX(box), label_record_number);
-	//gtk_box_append(GTK_BOX(box), label_font_name);	
 	gtk_box_append(GTK_BOX(box),label_desktop_font);
 	gtk_box_append(GTK_BOX(box),label_gnome_text_scale);
-	gtk_box_append(GTK_BOX(box),label_font_size);
 	gtk_box_append(GTK_BOX(box),label_work_dir);
 	gtk_box_append(GTK_BOX(box),label_working_dir);
 	
-	set_widget_font_size(dialog);	
+	//set_widget_font_size(dialog);
 	gtk_window_present (GTK_WINDOW (dialog));
 	g_signal_connect (dialog, "response", G_CALLBACK (gtk_window_destroy), NULL);
  	
@@ -3972,18 +2920,17 @@ static void callbk_info(GSimpleAction *action, GVariant *parameter,  gpointer us
 //-----------------------------------------------------------------
 static void callbk_delete_all_response(GtkDialog *dialog, gint response_id, gpointer  user_data)								 
 {
-	
-	
+
 	GtkWindow *window = user_data; //window data
     if(response_id==GTK_RESPONSE_OK)
 	{    
-    //g_print("Danger: Deleting everything\n");
+    g_print("Danger: Deleting everything\n");
     
     Event e_empty;
     e_empty.id=0;    
-    strcpy(e_empty.title, "");   
+    strcpy(e_empty.summary, "");
     strcpy(e_empty.location,"");
-    strcpy(e_empty.type,"");
+    strcpy(e_empty.description,"");
     e_empty.year=0;
     e_empty.month=0;
     e_empty.day=0;
@@ -3993,58 +2940,21 @@ static void callbk_delete_all_response(GtkDialog *dialog, gint response_id, gpoi
     e_empty.is_yearly=0;
     e_empty.is_allday=0;
     
-    for(int i=0;  i<m_db_size; i++)
+    for(int i=0;  i<m_store_size; i++)
     {
-		db_store[i]=e_empty;		
+		event_store[i]=e_empty;
 	}
     
     reset_marked_dates(); 
     reset_priority_dates(); 
     update_calendar(GTK_WINDOW(window));
 	update_store(m_year,m_month,m_day);
-	m_db_size=0;
+	m_store_size=0;
 	m_id_selection=-1;
 	m_row_index=-1; 	
     }
     gtk_window_destroy(GTK_WINDOW(dialog));	       
 
-}
-//----------------------------------------------------------------
-// Callback delete all
-//-----------------------------------------------------------------
-static void callbk_delete_all(GSimpleAction *action, GVariant *parameter,  gpointer user_data){
-
-	
-	GtkWindow *window = GTK_WINDOW (gtk_widget_get_ancestor (GTK_WIDGET (user_data),
-	GTK_TYPE_WINDOW));
-	
-	if (!GTK_IS_WINDOW (window))
-	{      
-	g_print("callbk font: error not a window\n");
-	return;      
-	}
- 
-  GtkWidget *dialog;
-  gint response; 
-
-  dialog = GTK_WIDGET (gtk_message_dialog_new (window,
-                                               GTK_DIALOG_MODAL|
-                                               GTK_DIALOG_DESTROY_WITH_PARENT|
-                                               GTK_DIALOG_USE_HEADER_BAR,
-                                               GTK_MESSAGE_INFO,
-                                               GTK_BUTTONS_NONE,
-                                               "Delete"));
-  gtk_message_dialog_format_secondary_text (GTK_MESSAGE_DIALOG (dialog),
-                                            "All events will be delete");
-  gtk_dialog_add_buttons (GTK_DIALOG (dialog), 
-                          "Cancel", GTK_RESPONSE_CANCEL,
-                          "Delete", GTK_RESPONSE_OK,
-                          NULL);  
-
-  set_widget_font_size(dialog);
-    
-  g_signal_connect (dialog, "response", G_CALLBACK (callbk_delete_all_response),window);
-  gtk_window_present (GTK_WINDOW (dialog));
 }
 
 //----------------------------------------------------------------
@@ -4105,16 +3015,6 @@ int compare (const void * a, const void * b)
     return 0;
 }
 
-//----------------------------------------------------------------
-// Callback speak version
-//-----------------------------------------------------------------
-
-// static void callbk_speak_about(GSimpleAction *action,
-// 							G_GNUC_UNUSED  GVariant      *parameter,
-// 							  gpointer       user_data){
-//
-//
-// }
 
 //---------------------------------------------------------------------
 // startup and shutdown
@@ -4134,9 +3034,9 @@ static void startup (GtkApplication *app)
 {
 	
 	//g_print("Allocating memory of size %d bytes\n",max_records*sizeof(Event));	
-	db_store=malloc(max_records*sizeof(Event));
+	event_store=malloc(max_records*sizeof(Event));
 	
-	if (db_store==NULL){
+	if (event_store==NULL){
 	g_print("memory allocation failed -not enough RAM\n");
 	exit(1);
 	}
@@ -4160,7 +3060,7 @@ static void startup (GtkApplication *app)
 void callbk_shutdown(GtkWindow *window, gint response_id,  gpointer  user_data){
 	//g_print("shutdown function called\n");	
 	save_csv_file();
-	free(db_store);
+	free(event_store);
 }
 
 
@@ -4414,6 +3314,7 @@ char* get_holiday(int day) {
 	return "";
 }
 
+
 //---------------------------------------------------------------------
 // update ui
 //---------------------------------------------------------------------
@@ -4425,6 +3326,8 @@ static void update_calendar(GtkWindow *window) {
   GtkWidget *grid;
   GtkWidget *button_next_month;
   GtkWidget *button_prev_month; 
+  GtkWidget *button_next_year;
+  GtkWidget *button_prev_year;
   GtkWidget *sw; //scrolled window
   GtkWidget* listbox;
   GtkWidget *label; //for days of week Mon, Tue etc..
@@ -4438,9 +3341,11 @@ static void update_calendar(GtkWindow *window) {
   
   grid =gtk_grid_new();
   gtk_window_set_child (GTK_WINDOW (window), grid);
+  //gtk_grid_set_row_homogeneous (GTK_GRID (grid), TRUE);
+  gtk_grid_set_column_homogeneous (GTK_GRID (grid), TRUE);
   
   //GListStore *store;		
-  m_store = g_list_store_new (display_object_get_type ()); 
+  m_store = g_list_store_new (display_object_get_type ()); //class Gio.ListStore
   
   char* weekday_str="";
   GDate *day_date;
@@ -4526,7 +3431,7 @@ static void update_calendar(GtkWindow *window) {
    if (m_holidays) {
 	   
 	   //append holiday text
-	   char * holiday_str = get_holiday(m_day);
+	   gchar * holiday_str = get_holiday(m_day);
 	   day_month_year_str =g_strconcat(day_month_year_str," ",holiday_str, NULL);
    }
    
@@ -4553,43 +3458,64 @@ static void update_calendar(GtkWindow *window) {
   gchar* j_str;
   gchar* btn_str="";
   
-  button_next_month=gtk_button_new_with_label (">>");
+  button_next_month=gtk_button_new_with_label (">");
   g_signal_connect (button_next_month, "clicked", G_CALLBACK (callbk_next_month),window);
   
-  button_prev_month=gtk_button_new_with_label ("<<");
+  button_prev_month=gtk_button_new_with_label ("<");
   g_signal_connect (button_prev_month, "clicked", G_CALLBACK (callbk_prev_month),window);  
+
+   button_next_year=gtk_button_new_with_label (">>");
+   g_signal_connect (button_next_year, "clicked", G_CALLBACK (callbk_next_year),window);
+
+   button_prev_year=gtk_button_new_with_label ("<<");
+   g_signal_connect (button_prev_year, "clicked", G_CALLBACK (callbk_prev_year),window);
+
+
+   //Grid is 7 days
+
+   /*
+	- -*------------------------------------
+	0  | 1  | 2  | 3   | 4  | 5  | 6  |
+	Mon Tue  Wed  Thu  Fri  Sat  Sun
+
+	*/
+
+  //void gtk_grid_attach (GtkGrid* grid, GtkWidget* child, int column, int row, int width, int height)
    
-  gtk_grid_attach(GTK_GRID(grid),button_prev_month,0,0,1,1); 
-  gtk_grid_attach(GTK_GRID(grid),label_date,1,0,5,1);
-  gtk_grid_attach(GTK_GRID(grid),button_next_month,6,0,1,1);
+  gtk_grid_attach(GTK_GRID(grid),button_prev_year,0,0,1,1);
+  gtk_grid_attach(GTK_GRID(grid),button_prev_month,1,0,1,1);
+
+  gtk_grid_attach(GTK_GRID(grid),label_date,2,0,3,1);
+  gtk_grid_attach(GTK_GRID(grid),button_next_month,5,0,1,1);
+  gtk_grid_attach(GTK_GRID(grid),button_next_year,6,0,1,1);
     	
  
   label= gtk_label_new("Mon");
-  set_widget_font_size(label); 
+  //set_widget_font_size(label);
   gtk_grid_attach(GTK_GRID(grid),label,0,1,1,1);
   
   label= gtk_label_new("Tue");
-  set_widget_font_size(label);   
+  //set_widget_font_size(label);
   gtk_grid_attach(GTK_GRID(grid),label,1,1,1,1);
   
   label= gtk_label_new("Wed");
-  set_widget_font_size(label);
+  //set_widget_font_size(label);
   gtk_grid_attach(GTK_GRID(grid),label,2,1,1,1);
   
   label= gtk_label_new("Thu");
-  set_widget_font_size(label);
+  //set_widget_font_size(label);
   gtk_grid_attach(GTK_GRID(grid),label,3,1,1,1);
   
   label= gtk_label_new("Fri");
-  set_widget_font_size(label);
+  //set_widget_font_size(label);
   gtk_grid_attach(GTK_GRID(grid),label,4,1,1,1);
   
   label= gtk_label_new("Sat");
-  set_widget_font_size(label); 
+  //set_widget_font_size(label);
   gtk_grid_attach(GTK_GRID(grid),label,5,1,1,1);
   
   label= gtk_label_new("Sun");
-  set_widget_font_size(label);
+  //set_widget_font_size(label);
   gtk_grid_attach(GTK_GRID(grid),label,6,1,1,1);
   
   GDate *today_date; 
@@ -4610,7 +3536,25 @@ static void update_calendar(GtkWindow *window) {
                 
         if (day > 0 && day <= days_in_month) {
         
-        btn_str =g_strdup_printf ("%d", day); //%i
+        if(marked_date[day-1]) {
+
+			if(day==today_day && m_month==today_month && m_year==today_year) {
+				btn_str =g_strdup_printf ("%s%d%s%s","[", day,"]","*"); //%i
+			}
+			else {
+			btn_str =g_strdup_printf ("%d%s", day,"*"); //%i
+			}
+		}
+		else {
+			if(day==today_day && m_month==today_month && m_year==today_year) {
+				btn_str =g_strdup_printf ("%s%d%s","[", day,"]"); //%i
+			}
+			else {
+			btn_str =g_strdup_printf ("%d", day); //%i
+			}
+		}
+
+		//btn_str =g_strdup_printf ("%d", day); //%i
         
         button = gtk_button_new_with_label (btn_str); 
         
@@ -4621,32 +3565,9 @@ static void update_calendar(GtkWindow *window) {
 		
 		 GDate *current_date = g_date_new();
 		 g_date_set_dmy (current_date, day, m_month, m_year);
+
 		
-			
-		
-		//markup event days
-		if(marked_date[day-1]) {			
-			set_event_button_colour(GTK_BUTTON(button));			
-		}
-		
-		if(priority_date[day-1]) {	
-			//g_print("Priority day = %i\n",day);	
-			set_priority_button_colour(GTK_BUTTON(button));		
-		}
-		
-		if(is_public_holiday(day) && m_holidays) {
-		set_holiday_button_colour(GTK_BUTTON(button));
-	    }
-	    
-	    //Always show today color
-	    if(day==today_day && m_month==today_month && m_year==today_year) {
-			set_today_button_colour(GTK_BUTTON(button));
-		}
-		
-		
-		
-		
-		set_widget_font_size(button);
+		//set_widget_font_size(button);
 		g_object_set_data(G_OBJECT(button), "button-window-key",window);         
         g_signal_connect (button, "clicked", G_CALLBACK (callbk_day_selected), current_date);
         gtk_grid_attach(GTK_GRID(grid),button,col,row,1,1);	
@@ -4675,13 +3596,7 @@ static void update_calendar(GtkWindow *window) {
   gtk_grid_attach(GTK_GRID(grid),sw,0,n_rows+1,7,8);
   
   g_object_set_data(G_OBJECT(window), "window-listbox-key",listbox);
-  
-  
-  set_widget_font_size(label_date);
-  set_widget_font_size(button_next_month);
-  set_widget_font_size(button_prev_month);
-  set_widget_font_size(listbox);
-  //set_widget_font_size(label);  
+
 }
 
 static void update_header (GtkWindow *window)
@@ -4690,110 +3605,62 @@ static void update_header (GtkWindow *window)
 	GtkWidget *button_new_event;
 	GtkWidget *button_edit_event;
 	GtkWidget *button_delete_selected;
-	//GtkWidget *button_speak;
 	GtkWidget *menu_button; 
-	GtkStyleContext *context;  //needed for adwaita button icons
-				
+
 	header = gtk_header_bar_new ();	
 	gtk_window_set_titlebar (GTK_WINDOW(window), header);
 	
-		
-	if(m_use_adwaita_icons){
-	//appointment-new-symbolic or document-new-symbolic
-	button_new_event = gtk_button_new_from_icon_name ("appointment-new-symbolic"); 	
-	context = gtk_widget_get_style_context (button_new_event);
-	gtk_style_context_add_class (context, "circular");
-	gtk_style_context_add_class (context, "flat");
-	gtk_widget_set_valign (button_new_event, GTK_ALIGN_CENTER); 
-	} else {
-		
-		button_new_event = gtk_button_new_with_label ("New");
-	}
-			
-	gtk_widget_set_tooltip_text(button_new_event, "New Event");
+	button_new_event = gtk_button_new_with_label ("New Event");
+	//context = gtk_widget_get_style_context (button_new_event);
+	gtk_widget_set_tooltip_text(button_new_event, "New calendar event");
 	g_signal_connect (button_new_event, "clicked", G_CALLBACK (callbk_new_event), window);	
-	g_object_set_data(G_OBJECT(button_new_event), "button-window-key",window); 
+	//gtk_button_set_has_frame (GTK_BUTTON(button_new_event),TRUE);
+	//g_object_set_data(G_OBJECT(button_new_event), "button-window-key",window);
 	
-	//button edit selected event
-	
-	if(m_use_adwaita_icons) {	
-	//what to use --- document-edit-symbolic edit-redo-symbolic edit-select-symbolic
-	//legacy:appointment-missed.png appointment-new.png appointment-soon.png
-	button_edit_event = gtk_button_new_from_icon_name ("appointment-soon-symbolic"); 
-	context = gtk_widget_get_style_context (button_edit_event);
-	gtk_style_context_add_class (context, "circular");
-	gtk_style_context_add_class (context, "flat");
-	gtk_widget_set_valign (button_edit_event, GTK_ALIGN_CENTER); 
-	} else {
-	button_edit_event = gtk_button_new_with_label ("Edit");	
-	}
-	
-	gtk_widget_set_tooltip_text(button_edit_event, "Edit Selected Event");
+	button_edit_event = gtk_button_new_with_label ("Edit Event");
+	gtk_widget_set_tooltip_text(button_edit_event, "Edit selected event");
 	g_signal_connect (button_edit_event, "clicked", G_CALLBACK (callbk_edit_event), window);    
 	
-	//button delete selected event
-		
-	if(m_use_adwaita_icons) {
-	button_delete_selected = gtk_button_new_from_icon_name ("edit-delete-symbolic");
-	context = gtk_widget_get_style_context (button_delete_selected);
-	gtk_style_context_add_class (context, "circular");
-	gtk_style_context_add_class (context, "flat");
-	gtk_widget_set_valign (button_delete_selected, GTK_ALIGN_CENTER); 
-	} else {
-	button_delete_selected = gtk_button_new_with_label ("Delete");
-	}
-		
-	gtk_widget_set_tooltip_text(button_delete_selected, "Delete Selected");  
-	
+
+	button_delete_selected = gtk_button_new_with_label ("Delete Event");
+	gtk_widget_set_tooltip_text(button_delete_selected, "Delete selected event");
 	g_signal_connect (button_delete_selected, "clicked", G_CALLBACK (callbk_delete_selected), window);
-	
-		
+
 	//Packing
 	gtk_header_bar_pack_start(GTK_HEADER_BAR (header),button_new_event);
 	gtk_header_bar_pack_start(GTK_HEADER_BAR (header),button_edit_event);   
 	gtk_header_bar_pack_start(GTK_HEADER_BAR (header), button_delete_selected);
-	//gtk_header_bar_pack_start(GTK_HEADER_BAR (header), button_speak);
-	
-	
+
 	//Menu model
 	GMenu *menu, *section; 	
 	menu = g_menu_new ();  
-	
-	//section = g_menu_new ();
-	//g_menu_append (section, "Preferences", "app.preferences");	
-	//g_menu_append_section (menu, NULL, G_MENU_MODEL (section));
-	//g_object_unref (section);
-	
+
 	section = g_menu_new ();
-	g_menu_append (section, "Calendar Options", "app.calendaroptions");	
+	g_menu_append (section, "Preferences", "app.preferences");
 	g_menu_append_section (menu, NULL, G_MENU_MODEL (section));
 	g_object_unref (section);
-	
-	section = g_menu_new ();
-	g_menu_append (section, "Talk Options", "app.talkoptions");	
-	g_menu_append_section (menu, NULL, G_MENU_MODEL (section));
-	g_object_unref (section);
-	
 	
 	section = g_menu_new ();
 	g_menu_append (section, "Speak", "app.speak"); 	
 	g_menu_append_section (menu, NULL, G_MENU_MODEL (section));
 	g_object_unref (section);
 	
-	
-	section = g_menu_new ();
-	g_menu_append (section, "Delete All", "app.delete");	
-	g_menu_append_section (menu, NULL, G_MENU_MODEL (section));
-	g_object_unref (section);
-	
 	section = g_menu_new ();
 	g_menu_append (section, "Information", "app.info"); //show app info
-	g_menu_append (section, "Shortcuts", "app.shortcuts"); //show shortcuts
-	//g_menu_append (section, "Speak Version", "app.version");  //speak version
-	g_menu_append (section, "About", "app.about");
-	g_menu_append_submenu (menu, "_Help", G_MENU_MODEL (section));
+	g_menu_append_section (menu, NULL, G_MENU_MODEL (section));
 	g_object_unref (section);
-	
+
+	section = g_menu_new ();
+	g_menu_append (section, "Shortcuts", "app.shortcuts"); //show shortcuts
+	g_menu_append_section (menu, NULL, G_MENU_MODEL (section));
+	g_object_unref (section);
+
+	section = g_menu_new ();
+	g_menu_append (section, "About", "app.about");
+	g_menu_append_section (menu, NULL, G_MENU_MODEL (section));
+	g_object_unref (section);
+
+
 	section = g_menu_new ();
 	g_menu_append (section, "Quit", "app.quit");
 	g_menu_append_section (menu, NULL, G_MENU_MODEL(section));
@@ -4804,17 +3671,9 @@ static void update_header (GtkWindow *window)
 	gtk_widget_set_tooltip_text(menu_button, "Menu");
 	gtk_menu_button_set_icon_name (GTK_MENU_BUTTON (menu_button),"open-menu-symbolic"); 		
 	gtk_menu_button_set_menu_model (GTK_MENU_BUTTON (menu_button), G_MENU_MODEL(menu));
-	
-	//gtk_widget_show (menu_button);  
+
 	gtk_header_bar_pack_end(GTK_HEADER_BAR (header), menu_button);
-	//gtk_header_bar_pack_end(GTK_HEADER_BAR (header), button_speak);
-		
-	set_widget_font_size(header);
-	set_widget_font_size(button_new_event);
-	set_widget_font_size(button_edit_event);
-	set_widget_font_size(button_delete_selected);
-	//set_widget_font_size(button_speak);
-	set_widget_font_size(menu_button);
+
 	
 }
     
@@ -4823,101 +3682,59 @@ static void update_header (GtkWindow *window)
 
 static void activate (GtkApplication *app, gpointer  user_data)
 {
-  GtkWidget *window;
-  GtkWidget *header;  
-   
- 
-  const gchar *speak_accels[2] = { "space", NULL }; 
-  const gchar *home_accels[2] = { "Home", NULL };
- 
-    
-    
-  // create a new window, and set its title 
-  window = gtk_application_window_new (app);
-  gtk_window_set_title (GTK_WINDOW (window), "Calendar");
-  gtk_window_set_default_size(GTK_WINDOW (window),700,400);
-  g_signal_connect (window, "destroy", G_CALLBACK (callbk_shutdown), NULL);
-    
-  GDate *current_date; 
-  current_date = g_date_new();
-  g_date_set_time_t (current_date, time (NULL)); 
-  
-  m_day =g_date_get_day(current_date);
-  m_month =g_date_get_month(current_date);  
-  m_year =g_date_get_year(current_date);
-  
-  m_today_day =m_day;
-  m_today_month=m_month;
-  m_today_year =m_year;
-  
-  g_date_free (current_date);
-  
-  //startup notifcation
-  if(m_startup_notification) {
-  char* message="You have ";
-  char *event_number_str;
-  int event_number=get_number_of_events();
-  
-  if (event_number==0) event_number_str = "no events today";
-  else if (event_number==1) {
-  event_number_str = g_strdup_printf("%i", event_number); 
-  event_number_str =g_strconcat(event_number_str," event today", NULL);
-  }
-  else {
-  event_number_str = g_strdup_printf("%i", event_number); 
-  event_number_str =g_strconcat(event_number_str," events today", NULL);	  
-  }
-  message=g_strconcat(message,event_number_str, NULL);	
-  show_notification(message);
-  } //if startup notification
-  
-    
-  //mark days with events
-  reset_marked_dates();
-  update_marked_dates(m_month,m_year);
-  reset_priority_dates();
-  update_priority_dates(m_month,m_year);  
-  
-  	
+	GtkWidget *window;
+	GtkWidget *header;
+
+	const gchar *speak_accels[2] = { "space", NULL };
+	const gchar *home_accels[2] = { "Home", NULL };
+
+	// create a new window, and set its title
+	window = gtk_application_window_new (app);
+	gtk_window_set_title (GTK_WINDOW (window), " ");
+	gtk_window_set_default_size(GTK_WINDOW (window),700,450);
+	g_signal_connect (window, "destroy", G_CALLBACK (callbk_shutdown), NULL);
+
+	GDate *current_date;
+	current_date = g_date_new();
+	g_date_set_time_t (current_date, time (NULL));
+
+	m_day =g_date_get_day(current_date);
+	m_month =g_date_get_month(current_date);
+	m_year =g_date_get_year(current_date);
+
+	m_today_day =m_day;
+	m_today_month=m_month;
+	m_today_year =m_year;
+
+	g_date_free (current_date);
+
+	//mark days with events
+	reset_marked_dates();
+	update_marked_dates(m_month,m_year);
+	reset_priority_dates();
+	update_priority_dates(m_month,m_year);
+
 	GSimpleAction *speak_action;	
 	speak_action=g_simple_action_new("speak",NULL); //app.speak
 	g_action_map_add_action(G_ACTION_MAP(app), G_ACTION(speak_action)); //make visible	
 	g_signal_connect(speak_action, "activate",  G_CALLBACK(callbk_speak), window);
 	
-// 	GSimpleAction *speak_about_action;
-// 	speak_about_action=g_simple_action_new("version",NULL); //app.version
-// 	g_action_map_add_action(G_ACTION_MAP(app), G_ACTION(speak_about_action)); //make visible
-// 	g_signal_connect(speak_about_action, "activate",  G_CALLBACK(callbk_speak_about), window);
-	
-	GSimpleAction *about_action;	
+	GSimpleAction *about_action;
 	about_action=g_simple_action_new("about",NULL); //app.about
-	g_action_map_add_action(G_ACTION_MAP(app), G_ACTION(about_action)); //make visible	
+	g_action_map_add_action(G_ACTION_MAP(app), G_ACTION(about_action)); //make visible
 	g_signal_connect(about_action, "activate",  G_CALLBACK(callbk_about), window);
-	
-	
-	GSimpleAction *calendar_options_action;	
-	calendar_options_action=g_simple_action_new("calendaroptions",NULL); //app.calendaroptions
-	g_action_map_add_action(G_ACTION_MAP(app), G_ACTION(calendar_options_action)); //make visible	
-	g_signal_connect(calendar_options_action, "activate",  G_CALLBACK(callbk_calendar_options), window);
-	
-	
-	
-	GSimpleAction *talkoptions_action;	
-	talkoptions_action=g_simple_action_new("talkoptions",NULL); //app.talkoptions
-	g_action_map_add_action(G_ACTION_MAP(app), G_ACTION(talkoptions_action)); //make visible	
-	g_signal_connect(talkoptions_action, "activate",  G_CALLBACK(callbk_talkoptions), window);
-			
+
+	GSimpleAction *preferences_action;
+	preferences_action=g_simple_action_new("preferences",NULL); //app.preferences
+	g_action_map_add_action(G_ACTION_MAP(app), G_ACTION(preferences_action)); //make visible
+	g_signal_connect(preferences_action, "activate",  G_CALLBACK(callbk_preferences), window);
+
 	GSimpleAction *home_action;	
 	home_action=g_simple_action_new("home",NULL); //app.home
 	g_action_map_add_action(G_ACTION_MAP(app), G_ACTION(home_action)); //make visible	
 	g_signal_connect(home_action, "activate",  G_CALLBACK(callbk_home), window);
 	
-	GSimpleAction *delete_events_action;	
-	delete_events_action=g_simple_action_new("delete",NULL); //action = app.delete
-	g_action_map_add_action(G_ACTION_MAP(app), G_ACTION(delete_events_action)); //make visible	
-	g_signal_connect(delete_events_action, "activate",  G_CALLBACK(callbk_delete_all), window);
-	
-		
+
 	GSimpleAction *info_action;	
 	info_action=g_simple_action_new("info",NULL); //app.info
 	g_action_map_add_action(G_ACTION_MAP(app), G_ACTION(info_action)); //make visible	
@@ -4933,49 +3750,37 @@ static void activate (GtkApplication *app, gpointer  user_data)
 	quit_action=g_simple_action_new("quit",NULL); //app.quit
 	g_action_map_add_action(G_ACTION_MAP(app), G_ACTION(quit_action)); //make visible	
 	g_signal_connect(quit_action, "activate",  G_CALLBACK(callbk_quit), app);
-	
-    
-  // connect keyboard accelerators  
+
+	// connect keyboard accelerators
 	gtk_application_set_accels_for_action(GTK_APPLICATION(app),
-	"app.speak", speak_accels); 
-	
-	
-	                                    
+										  "app.speak", speak_accels);
 	
 	gtk_application_set_accels_for_action(GTK_APPLICATION(app),
-	"app.home", home_accels); 
+										  "app.home", home_accels);
 	
-	
-	
-    update_header(GTK_WINDOW(window));
-    
-    set_widget_font_size(window);
-    
-  update_calendar(GTK_WINDOW (window));  
-  //gtk_widget_show (window); //use present with gtk4
-  gtk_window_present (GTK_WINDOW (window));     
-  update_store(m_year,m_month,m_day); 
-    
-  if(m_talk && m_talk_at_startup) speak_events(); 
+	update_header(GTK_WINDOW(window));
+	update_calendar(GTK_WINDOW (window));
+	gtk_window_present (GTK_WINDOW (window));    //use present not show with gtk4
+	update_store(m_year,m_month,m_day);
+
+	if(m_talk && m_talk_at_startup) speak_events();
 }
 
 int main (int  argc, char **argv)
 {
-  
-  config_initialize();
-  GtkApplication *app;
-  int status;
 
-  app = gtk_application_new ("org.gtk.tikicalendar", G_APPLICATION_FLAGS_NONE);
-  
-  g_signal_connect_swapped(app, "startup", G_CALLBACK (startup),app);
-  
-  g_signal_connect (app, "activate", G_CALLBACK (activate), NULL);
-  
-  
-  
-  status = g_application_run (G_APPLICATION (app), argc, argv);
-  g_object_unref (app);
+	config_initialize();
+	GtkApplication *app;
+	int status;
 
-  return status;
+	app = gtk_application_new ("org.gtk.tikicalendar", G_APPLICATION_FLAGS_NONE);
+
+	g_signal_connect_swapped(app, "startup", G_CALLBACK (startup),app);
+
+	g_signal_connect (app, "activate", G_CALLBACK (activate), NULL);
+
+	status = g_application_run (G_APPLICATION (app), argc, argv);
+	g_object_unref (app);
+
+	return status;
 }

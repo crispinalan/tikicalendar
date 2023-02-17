@@ -8,10 +8,10 @@ Tiki Calendar is a Linux personal desktop calendar developed using C and [Gtk4](
 ## Core Features
 
 * built with Gtk4.6
-* event title, location, type, start and end time can be entered and edited
-* bespoke month calendar which allows days with events to be colour marked
-* priority events can be separately colour marked*
-* bespoke flat-file csv database with memory dynamically allocated for up to 5000 records
+* event summary, location, start and end time can be entered and edited
+* button grid month calendar which allows days with events to be marked
+* priority and is yearly can be used
+* csv file storage with memory dynamically allocated for up to 5000 records
 * audio for speaking the date and speech tags
 * binary for 64-bit Gtk4 distributions
 
@@ -39,6 +39,93 @@ Help->Information
 ```
 to show the current working directory where the events database is located.
 
+## Calendar Usage
+
+### Adding New Event
+
+* Select event date using the calendar.
+* Click the New button on the headerbar to invoke the "New Event" dialog.
+* Enter the event title.
+* Enter the location.
+* Enter start and end times.
+* Events are sorted by start time when displayed.
+* A colour marker is placed on a day in the calendar which has an event.
+* Navigate through the year using the calendar to add events.
+
+![](tikicalendar-new-event.png)
+
+
+### Editing Existing Event
+
+* Select the event in the list view and click the Edit button on the headerbar to edit.
+* Change details as appropriate.
+
+### Preferences
+
+* Use the Preferences dialog in the hamburger menu to change  options
+
+![](tikicalendar-preferences.png)
+
+You can show a calendar grid and event end-times in the list view. Talk options can also be changed.
+
+
+## Talking
+
+Tiki Calendar is not meant to be a talking calendar. See my [Talk Calendar](https://github.com/crispinalan/talkcalendar) Qt project for a talking calendar. However, it does have some limited speech capability for reading out the dates and speech tags. Ensure that the talk directory containing speech wav files is located in the current working directory.
+
+* Enable talking in Preferences
+* Click on a calendar date with events
+* Press the spacebar to read out the selected date, event number, event times and any speech tags if used
+* Enable "Talk At Startup" in the preferences dialog to read out the date for the current day and other details when the calendar is started
+
+
+### Speech Tags
+
+A speech tag is a keyword (e.g. birthday) which if added into the title text is read out by Tiki Calendar to give an indication of the type of event.
+
+The following tag words have been implemented relating to personal events
+
+```
+    activity, alert, anniversary, appointment,
+    bank, birthday, boxing,
+    calendar, christmas,
+    day, dentist, doctor,
+    easter, event, events,
+    family, friends, funeral,
+    halloween, holiday, hospital,
+    important, information,
+    meal, medical, meeting,
+    new, note,
+    party, payment, priority, public
+    reminder, restaurant retirement,
+    travel,
+    valentine, visit,
+    walk,wedding, work,
+    year
+```
+Event speech tagging can be effective for a quick audio overview of day events. You can combine speech tags. Examples include  "public holiday", "christmas day", "new year", "doctor appointment", "payment reminder" etc. If no speech tag is recognised then nothing is read out.
+
+### Information
+
+* Use the Information dialog to show the current working directory (in which the eventsdb.csv file should be stored) and other system information such as the system font being used.
+
+![](tikicalendar-information.png)
+
+* Use the About dialog to display current version.
+
+
+### Keyboard Shortcuts
+```
+Speak		Spacebar
+Today		Home Key
+```
+
+## Startup Applications
+
+Add Tiki Calendar to your start-up programs to read out the date and any event details when the computer is switched on.
+
+With the GNOME desktop use the GNOME "Tweak Tool" to add Tiki Calendar to your startup applications if required.
+
 
 ## Build From Source
 
@@ -58,7 +145,6 @@ sudo dnf install alsa-lib-devel
 ```
 
 ### Ubuntu and Debian Bookworm
-
 
 With both Ubuntu 22.04 and Debian Bookworm (in testing) and you need to install the following packages
 
@@ -87,114 +173,14 @@ Use the MAKEFILE to compile.
 make
 ./tikicalendar
 ```
-Geany can be used as an Integrated Development Environment when using Gtk only Linux distributions.
-
-## Calendar Usage
-
-### Adding New Event
-
-* Select event date using the calendar.
-* Click the New button on the headerbar to invoke the "New Event" dialog.
-* Enter the event title.
-* Enter the location.
-* Enter start and end times.
-* Events are sorted by start time when displayed.
-* A colour marker is placed on a day in the calendar which has an event.
-* Navigate through the year using the calendar to add events.
-
-![](tikicalendar-new-event.png)
-
-
-### Editing Existing Event
-
-* Select the event in the list view and click the Edit button on the headerbar to edit.
-* Change details as appropriate.
-
-### Calendar Options
-
-* Use the Calendar Options dialog in the hamburger menu to change calendar options
-
-![](calendar-options.png)
-
-You can show public holidays on the calendar and event end-times in the list view. You can change the colours and borders of the current day (today), event days and public holidays. Days with high priority events can have a separate colour.
-
-Startup notfication requires that the package libnotify-bin is installed.
-
-```
-sudo apt install libnotify-bin
-```
-
-
-## Speech
-
-Tiki Calendar is not meant to be a talking calendar. See my [Talk Calendar](https://github.com/crispinalan/talkcalendar) Qt project for a talking calendar. However, it does have some limited speech capability for reading out the dates and speech tags. Ensure that the talk directory containing speech wav files is located in the current working directory.
-
-* Enable talking in Talk Options
-* Click on a calendar date with events
-* Press the spacebar to read out the selected date, event number, event times and any speech tags if used
-* Enable "Talk At Startup" in the Talk Options to read out the date for the current day and other details when the calendar is started
-
-### Talk Options
-
-* Use the Talk Options dialog in the hamburger menu to choose what you want to speak.
-
-![](talk-options.png)
-
-
-### Speech Tags
-
-A speech tag is a keyword (e.g. birthday) which if added into the title text is read out by Tiki Calendar to give an indication of the type of event.
-
-The following tag words have been implemented relating to personal events
-
-```
-    activity, alert, anniversary, appointment,
-    bank, birthday, boxing,
-    calendar, christmas,
-    day, dentist, doctor,
-    easter, event, events,
-    family, friends, funeral,
-    halloween, holiday, hospital,
-    important, information,
-    meal, medical, meeting,
-    new, note,
-    party, payment, priority, public
-    reminder, restaurant,
-    travel,
-    valentine, visit,
-    wedding,
-    year
-```
-Event speech tagging can be effective for a quick audio overview of day events. You can combine speech tags. Examples include  "public holiday", "christmas day", "new year", "doctor appointment", "payment reminder" etc. If no speech tag is recognised then nothing is read out.
-
-### Help
-
-* Use the Information dialog to display current application preferences including the current working directory in which the eventsdb.csv file is stored
-
-
-* Use the About dialog to display current version.
-
-
-### Keyboard Shortcuts
-```
-Speak		Spacebar
-Today		Home Key
-```
-
-## Startup Applications
-
-Add Tiki Calendar to your start-up programs to read out the date and any event details when the computer is switched on.
-
-With the GNOME desktop use the GNOME "Tweak Tool" to add Tiki Calendar to your startup applications if required.
 
 ## History
 
 This is a hobby project under development to learn Gtk programming.
 
-The first iteration of the Tiki Calendar project used Gtk3 but then migrated to the newer Gtk4 toolkit. This project was forked and so can be found on github elsewhere. This Gtk4 version of Tiki Calendar uses a new bespoke flat-file csv database (rather than sqlite) with memory dynamically allocated for up to 5000 records. The events storage file is called "eventsdb.csv" and should be located in the current working directory. The talk directory containing the wav speech files should also be located in the current working directory.
+The first iteration of the Tiki Calendar project used Gtk3 but then migrated to the newer Gtk4 toolkit. This project was forked and so can be found on github elsewhere. This Gtk4 version of Tiki Calendar uses a csv file to store events (rather than sqlite) with memory dynamically allocated for up to 5000 records. The events storage file is called "eventsdb.csv" and should be located in the current working directory. The talk directory containing the wav speech files should also be located in the current working directory.
 
 I developed this calendar application to learn Gtk as at the time I was concerned that Qt may become closed source when the Qt Company announced that the Qt LTS versions and the offline installer were to become commercial-only [Qt licensing changes](https://www.qt.io/blog/qt-offering-changes-2020).  However, this proved not to be the case. Infact the Qt Company have released Qt 5.15.6 as [open-source](https://www.phoronix.com/news/Qt-5.15.6-LTS-Open-Source). Consequently, I continued developing my main Qt calendar application called [Talk Calendar](https://github.com/crispinalan/talkcalendar). This project is a Gtk4 Calendar and to avoid any confusion with my Qt Talk Calendar project I have called it Tiki Calendar. Tiki is an acronym for Tightly Integrated Knowledge Infrastructure. Tiki Calendar does have some limited speech capability using a local directory of speech files but is not indended to be a talking calendar. The idea was to have date reader on startup but I added a few more speech features such as tags.
-
 
 
 ## Gtk4 Depreciations
@@ -225,23 +211,29 @@ VolumeButton
 
 are being deprecated in Gtk4 version 4.10 onwards.
 
-I was aware that it was the intention of Gtk developers to eventually replace GtkTreeView and GtkComboBox with [list widgets](https://blog.gtk.org/2020/06/08/more-on-lists-in-gtk-4/) and so I did not use these classes in the development of this calendar. See my migration notes below.
+It was the intention of Gtk developers to eventually replace GtkTreeView and GtkComboBox with [list widgets](https://blog.gtk.org/2020/06/08/more-on-lists-in-gtk-4/) and so I did not use these classes in the development of this calendar.
 
-However, I was not aware that ColorButton, ColorChooserDialog were being depreciated as I use functions such as [gtk_color_chooser_get_rgba](https://docs.gtk.org/gtk4/method.ColorChooser.get_rgba.html) labelled "depreciated 4.10". I use this to allow the calendar user to select different colours for days with events, days with priority events and the today colour. I will have to give some thought on how to rewrite this code as other classes such as [GtkColorDialog](https://docs.gtk.org/gtk4/class.ColorDialog.html) are labeled "unstable since: 4.10".
+Functions such as
 
-The ListStore class is going to be depreciated in Gtk4.10 and I am assuming that you now have to use [Gio ListStore](https://docs.gtk.org/gio/ctor.ListStore.new.html). This means functions such as [gtk_list_store_new()](https://docs.gtk.org/gtk4/ctor.ListStore.new.html) used to creates a new list store are labeled "deprecated: 4.10". Fortunately, I have used GListStore in this calendar project creating a new GListStore with [g_list_store_new](https://docs.gtk.org/gio/ctor.ListStore.new.html).
+```
+gtk_widget_get_style_context
+gtk_style_context_add_provider
+gtk_color_chooser_get_rgba
+```
+ are being depreciated in Gtk4.10. These were used Tiki Calendar v0.1.x to colour the calendar grid buttons using css. I am assuming that the Gtk developers want to deprecate these functions so that apps use the system wide css theme. This design decision by the Gtk developers means that applications such as Tiki Calendar will be styled with the system theme being used.
 
+The Gtk ListStore class is going to be depreciated in Gtk4.10 and I am assuming that you now have to use [Gio ListStore](https://docs.gtk.org/gio/ctor.ListStore.new.html). This means functions such as [gtk_list_store_new()](https://docs.gtk.org/gtk4/ctor.ListStore.new.html) used to creates a new list store are labeled "deprecated: 4.10". Fortunately, I have used GListStore in this calendar project creating a new GListStore with [g_list_store_new](https://docs.gtk.org/gio/ctor.ListStore.new.html).
 
-The removal of MessageDialog will also require the code base to be changed as the function [gtk_message_dialog_new](https://docs.gtk.org/gtk4/ctor.MessageDialog.new.html) is being depreciated. I am assuming that you have to use [GtkAlertDialog](https://docs.gtk.org/gtk4/class.AlertDialog.html) instead but this is also labelled "unstable since: 4.10".
+Removing MessageDialog means that the function [gtk_message_dialog_new](https://docs.gtk.org/gtk4/ctor.MessageDialog.new.html) is being depreciated which was used in used Tiki Calendar v0.1.x to alert users when deleting events but I have now removed it.
 
-The current Tiki Calendar code base will need a major overhall to deal with the Gtk4.10 depreciations.
+The gtk_dialog_new_with_buttons() function is being depreciated and so the only other way I can see to create a dialog is to use gtk_window_new(). All of the dialogs have now been changed to use this the Tiki Calendar 0.2.x series.
 
 GTK developers are planning the [Gtk5](https://www.phoronix.com/news/GTK5-Likely-After-GTK-4.12) toolkit discussing making it a Wayland only [release](https://www.phoronix.com/news/GTK5-Might-Drop-X11).
 
 
 ## My Gtk3 to Gtk4 Migration Notes
 
-These notes may be of help if your are migrating a C Gtk3 project to Gtk4.
+These (older) notes may be of help if your are migrating a C Gtk3 project to Gtk4.
 
 Gtk4 uses [list widgets](https://docs.gtk.org/gtk4/migrating-3to4.html#consider-porting-to-the-new-list-widgets) such as GtkListBox and porting the Gtk3 version of this Calendar project has involved replacing the display of events with a GtkListBox. A significant effort had to be invested into this aspect of the porting. There is an article on scalable lists in gtk4 [here](https://blog.gtk.org/2020/06/07/scalable-lists-in-gtk-4/).
 
@@ -273,9 +265,10 @@ Other depreciations include "gtk_application_set_app_menu()" as discussed [here]
 
 ## Libadwaita
 
-The GNOME project uses a library called libadwaita which I believe is like a companion library for Gtk4 as you have to include both the libadwaita and Gtk libraries in a GNOME project. From what I can make out, libadwaita is a Gtk4 library for implementing the GNOME Human Interface Guidelines using the [Adwaita](https://en.wikipedia.org/wiki/Adwaita_(design_language)) design language. So if I undertand things correctly, Gtk4 is used for UI elements (e.g. buttons, text entry widgets) and layout managers while libadwaita provides GNOME styling and behaviour for these widgets.  It also adds things like notifications and animations.
+From what I can make out libadwaita is a GNOME specific version of Gtk4 which takes control of the look and feel of the user interface. It seems that you have to use a GNOME project source code template which replaces GTK_TYPE_APPLICATION with ADW_TYPE_APPLICATION. The Gtk application header #include <gtk/gtk.h> has to be changed to #include <libadwaita.h> and the build system has be modified to find the libadwaita library. Otherwise, libadwaita uses the Gtk API but the application style is different with windows for example having rounded corners. It also adds things like notifications and animations.
 
-I have avoided using libadwaita keeping this a Gtk4 only project. A simple notification system has been implemented using libnotify in this project.
+This is not a libadwaita project but a Gtk4 only project. The project focus is on improving the current code base, removing functions which are to be deprecated Gtk4.10 and adding further calendar features.
+
 
 ## Versioning
 
@@ -295,8 +288,14 @@ The Gtk4.0 GUI toolkit is licensed using LGPLv2.1.  Consequently, Tiki Calendar 
 
 * [Gtk](https://www.gtk.org/)
 * GTK is a free and open-source project maintained by GNOME and an active community of contributors. GTK is released under the terms of the [GNU Lesser General Public License version 2.1](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html).
+
 * Gtk4 [manual](https://developer-old.gnome.org/gtk4/stable/).
 
-* [Geany](https://www.geany.org/)
-* Geany is a small and lightweight Integrated Development Environment which only requires the GTK+ runtime libraries. It has features including syntax highlighting, code completion, auto completion of often used constructs (e.g. if, for and while), code folding, embedded terminal emulation and extensibility through plugins. Geany uses the GPLv2 license.
+* [Gtk API](https://docs.gtk.org/gtk4/index.html)
+
+* [GObject API](https://docs.gtk.org/gobject/index.html)
+
+* [Glib API](https://docs.gtk.org/glib/index.html)
+
+* [Gio API](https://docs.gtk.org/gio/index.html)
 
