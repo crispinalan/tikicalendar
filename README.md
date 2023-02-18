@@ -70,7 +70,7 @@ You can show a calendar grid and event end-times in the list view. Talk options 
 
 ## Talking
 
-Tiki Calendar was not intented to be a talking calendar but I have added some speech capability using Flite which is a free lightweight speech synthesizer. You need to install Flite to enable talking.
+Tiki Calendar has some some speech capability. It uses Flite which is a free lightweight speech synthesizer. You need to install Flite to enable talking.
 
 ```
 sudo apt install flite
