@@ -31,11 +31,10 @@
 #include <gtk/gtk.h>
 #include <glib/gstdio.h>  //needed for g_mkdir
 #include <math.h>  //compile with -lm
-#include "wavcat.h"
 
 
 #define CONFIG_DIRNAME "tikical-gtk4"
-#define CONFIG_FILENAME "tikical-gtk-config-020"
+#define CONFIG_FILENAME "tikical-gtk-config-021"
 
 static GMutex lock;
 
@@ -93,9 +92,10 @@ static int m_talk =1;
 static int m_talk_at_startup =1;
 static int m_talk_event_number=1;
 static int m_talk_time=0;
-static int m_talk_tags=0;
-static int m_talk_overlap=0; //to do
-static int m_talk_priority=0; //to do
+//static int m_talk_summary=0;
+static int m_talk_location=0;
+static int m_talk_overlap=0;
+static int m_talk_priority=0;
 static int m_talk_reset=0;
 
 static int m_frame =0; // grid button frames
@@ -196,8 +196,9 @@ static void config_load_default()
 	m_talk_at_startup=1;
 	m_talk_event_number=1;	
 	m_talk_time=1;
-	m_talk_tags=1;
-	m_talk_priority=0;	//todo
+	//m_talk_summary=1;
+	m_talk_location=0;
+	m_talk_priority=0;
 	m_talk_overlap=0; //todo
 	m_holidays=0; //todo
 	m_frame=0;
@@ -211,7 +212,8 @@ static void config_read()
 	m_talk_at_startup=1;
 	m_talk_event_number=1;	
 	m_talk_time=1;
-	m_talk_tags=1;
+	//m_talk_summary=1;
+	m_talk_location=0;
 	m_talk_priority=0;	
 	m_talk_overlap=0;
 	m_holidays=0;
@@ -227,7 +229,8 @@ static void config_read()
 	m_talk_at_startup=g_key_file_get_integer(kf, "calendar_settings", "talk_startup", NULL);
 	m_talk_event_number=g_key_file_get_integer(kf, "calendar_settings", "talk_event_number", NULL);	
 	m_talk_time=g_key_file_get_integer(kf, "calendar_settings", "talk_time", NULL);	
-	m_talk_tags=g_key_file_get_integer(kf, "calendar_settings", "talk_tags", NULL);
+	//m_talk_summary=g_key_file_get_integer(kf, "calendar_settings", "talk_summary", NULL);
+	m_talk_location=g_key_file_get_integer(kf, "calendar_settings", "talk_location", NULL);
 	m_talk_priority=g_key_file_get_integer(kf, "calendar_settings", "talk_priority", NULL);	//placeholder
 	m_talk_overlap = g_key_file_get_integer(kf, "calendar_settings", "talk_overlap", NULL);	//placeholder
 	m_holidays = g_key_file_get_integer(kf, "calendar_settings", "holidays", NULL);	//to do
@@ -247,7 +250,8 @@ void config_write()
 	g_key_file_set_integer(kf, "calendar_settings", "talk_startup", m_talk_at_startup);
 	g_key_file_set_integer(kf, "calendar_settings", "talk_event_number", m_talk_event_number);
 	g_key_file_set_integer(kf, "calendar_settings", "talk_time", m_talk_time);	
-	g_key_file_set_integer(kf, "calendar_settings", "talk_tags", m_talk_tags);
+	//g_key_file_set_integer(kf, "calendar_settings", "talk_summary", m_talk_summary);
+	g_key_file_set_integer(kf, "calendar_settings", "talk_location", m_talk_location);
 	g_key_file_set_integer(kf, "calendar_settings", "talk_priority", m_talk_priority);		
 	g_key_file_set_integer(kf, "calendar_settings", "talk_overlap", m_talk_overlap);
 	g_key_file_set_integer(kf, "calendar_settings", "holidays", m_holidays); //to do
@@ -560,1095 +564,583 @@ static void callbk_speak(GSimpleAction* action, GVariant *parameter,gpointer use
 	
 }
 
+gchar* convert_number_to_string(int number) {
 
-//---------------------------------------------------------------------
-// Speaking using local talk wav files
-//---------------------------------------------------------------------
+	gchar* result =NULL;
 
-
-char* convert_date_to_weekday(int day, int month, int year) {
-
-	char* weekday_str="";
-	GDate* day_date;
-	day_date = g_date_new_dmy(day, month, year);
-	GDateWeekday weekday =g_date_get_weekday(day_date);
-
-	switch(weekday)
-	{
-	case G_DATE_MONDAY:
-	weekday_str="talk/day/monday.wav";;
-	break;
-	case G_DATE_TUESDAY:
-	weekday_str="talk/day/tuesday.wav";;
-	break;
-	case G_DATE_WEDNESDAY:
-	weekday_str="talk/day/wednesday.wav";
-	break;
-	case G_DATE_THURSDAY:
-	weekday_str="talk/day/thursday.wav";
-	break;
-	case G_DATE_FRIDAY:
-	weekday_str="talk/day/friday.wav";
-	break;
-	case G_DATE_SATURDAY:
-	weekday_str="talk/day/saturday.wav";
-	break;
-	case G_DATE_SUNDAY:
-	weekday_str="talk/day/sunday.wav";
-	break;
-	default:
-	weekday_str="talk/f/fullstop.wav";
-	}//switch
-
-	return weekday_str;
-}
-
-char* convert_day_to_ordinal_string(int day) {
-
-	char* day_str ="";
-
-	switch (day) {
+	switch (number) {
 		case 1:
-		day_str="talk/ordinal/first.wav";
+		result ="one";
 		break;
 		case 2:
-		day_str="talk/ordinal/second.wav";
+		result ="two";
 		break;
 		case 3:
-		day_str="talk/ordinal/third.wav";
+		result ="three";
 		break;
 		case 4:
-		day_str="talk/ordinal/fourth.wav";
+		result ="four";
 		break;
 		case 5:
-		day_str="talk/ordinal/fifth.wav";
+		result ="five";
 		break;
 		case 6:
-		day_str="talk/ordinal/sixth.wav";
+		result ="six";
 		break;
 		case 7:
-		day_str="talk/ordinal/seventh.wav";
+		result ="seven";
 		break;
 		case 8:
-		day_str="talk/ordinal/eighth.wav";
+		result ="eight";
 		break;
 		case 9:
-		day_str="talk/ordinal/ninth.wav";
+		result ="nine";
 		break;
 		case 10:
-		day_str="talk/ordinal/tenth.wav";
+		result ="ten";
 		break;
 		case 11:
-		day_str="talk/ordinal/eleventh.wav";
+		result ="eleven";
 		break;
 		case 12:
-		day_str="talk/ordinal/twelfth.wav";
+		result ="twelve";
 		break;
 		case 13:
-		day_str="talk/ordinal/thirteenth.wav";
-
+		result ="thirteen";
 		break;
 		case 14:
-		day_str="talk/ordinal/fourteenth.wav";
+		result ="fourteen";
 		break;
 		case 15:
-		day_str="talk/ordinal/fifteenth.wav";
-
+		result ="fifteen";
 		break;
 		case 16:
-		day_str="talk/ordinal/sixteenth.wav";
-
+		result ="sixteen";
 		break;
 		case 17:
-		day_str="talk/ordinal/seventeenth.wav";
-
+		result ="seventeen";
 		break;
 		case 18:
-		day_str="talk/ordinal/eighteenth.wav";
-
+		result ="eighteen";
 		break;
 		case 19:
-		day_str="talk/ordinal/nineteenth.wav";
-
+		result ="nineteen";
 		break;
 		case 20:
-		day_str="talk/ordinal/twentieth.wav";
-
+		result ="twenty";
 		break;
 		case 21:
-		day_str="talk/ordinal/twentyfirst.wav";
-
+		result ="twenty one";
 		break;
 		case 22:
-		day_str="talk/ordinal/twentysecond.wav";
+		result ="twenty two";
 		break;
 		case 23:
-		day_str="talk/ordinal/twentythird.wav";
+		result ="twenty three";
 		break;
 		case 24:
-		day_str="talk/ordinal/twentyfourth.wav";
-
+		result ="twenty four";
 		break;
 		case 25:
-		day_str="talk/ordinal/twentyfifth.wav";
-
+		result ="twenty five";
 		break;
 		case 26:
-		day_str="talk/ordinal/twentysixth.wav";
-
+		result ="twenty six";
 		break;
 		case 27:
-		day_str="talk/ordinal/twentyseventh.wav";
-
+		result ="twenty seven";
 		break;
 		case 28:
-		day_str="talk/ordinal/twentyeighth.wav";
-
+		result ="twenty eight";
 		break;
 		case 29:
-		day_str="talk/ordinal/twentyninth.wav";
-
+		result ="twenty nine";
 		break;
 		case 30:
-		day_str="talk/ordinal/thirtieth.wav";
-
+		result ="thirty";
 		break;
 		case 31:
-		day_str="talk/ordinal/thirtyfirst.wav";
-
+		result ="thirty one";
 		break;
+		case 32:
+		result ="thirty two";
+		break;
+		case 33:
+		result ="thirty three";
+		break;
+		case 34:
+		result ="thirty four";
+		break;
+		case 35:
+		result ="thirty five";
+		break;
+		case 36:
+		result ="thirty six";
+		break;
+		case 37:
+		result ="thirty seven";
+		break;
+		case 38:
+		result ="thirty eight";
+		break;
+		case 39:
+		result ="thirty nine";
+		break;
+		case 40:
+		result ="forty";
+		break;
+		case 41:
+		result ="forty one";
+		break;
+		case 42:
+		result ="forty two";
+		break;
+		case 43:
+		result ="forty three";
+		break;
+		case 44:
+		result ="forty four";
+		break;
+		case 45:
+		result ="forty five";
+		break;
+		case 46:
+		result ="forty six";
+		break;
+		case 47:
+		result ="forty seven";
+		break;
+		case 48:
+		result ="forty eight";
+		break;
+		case 49:
+		result ="forty nine";
+		break;
+		case 50:
+		result ="fifty";
+		break;
+		case 51:
+		result ="fifty one";
+		break;
+		case 52:
+		result ="fifty two";
+		break;
+		case 53:
+		result ="fifty three";
+		break;
+		case 54:
+		result ="fifty four";
+		break;
+		case 55:
+		result ="fifty five";
+		break;
+		case 56:
+		result ="fifty six";
+		break;
+		case 57:
+		result ="fifty seven";
+		break;
+		case 58:
+		result ="fifty eight";
+		break;
+		case 59:
+		result ="fifty nine";
+		break;
+
 		default:
-		//Unknown ordinal
-		day_str="talk/f/fullstop.wav";
+		result ="zero";
 		break;
-	  } //day switch
 
-
-	return day_str;
-
-}
-
-char* convert_month_to_string(int month) {
-
-	char* result ="";
-
-	switch(month) {
-	case 1:
-		result = "talk/month/january.wav";
-		break;
-	case 2:
-		result = "talk/month/february.wav";
-		break;
-	case 3:
-		result= "talk/month/march.wav";
-		break;
-	case 4:
-		result = "talk/month/april.wav";
-		break;
-	case 5:
-		result ="talk/month/may.wav";
-		break;
-	case 6:
-		result = "talk/month/june.wav";
-		break;
-	case 7:
-		result ="talk/month/july.wav";
-		break;
-	case 8:
-		result ="talk/month/august.wav";
-		break;
-	case 9:
-		result= "talk/month/september.wav";
-		break;
-	case 10:
-		result = "talk/month/october.wav";
-		break;
-	case 11:
-		result = "talk/month/november.wav";
-		break;
-	case 12:
-		result = "talk/month/december.wav";
-		break;
-	default:
-		result = "talk/f/fullstop.wav";
 	}
 
 	return result;
 }
 
-char* convert_hour_to_cardinal_string(int hour){
 
-	char* result ="";
-
-
-     switch(hour)
-     {
-         case 1:
-		 result ="talk/cardinal/1.wav";
-		 break;
-		 case 2:
-		 result ="talk/cardinal/2.wav";
-		 break;
-		 case 3:
-		 result = "talk/cardinal/3.wav";
-		 break;
-		 case 4:
-		 result ="talk/cardinal/4.wav";
-		 break;
-		 case 5:
-		 result ="talk/cardinal/5.wav";
-		 break;
-		 case 6:
-		 result ="talk/cardinal/6.wav";
-		 break;
-		 case 7:
-		 result ="talk/cardinal/7.wav";
-		 break;
-		 case 8:
-		 result="talk/cardinal/8.wav";
-		 break;
-		 case 9:
-		 result="talk/cardinal/9.wav";
-		 break;
-		 case 10:
-		 result="talk/cardinal/10.wav";
-		 break;
-		 case 11:
-		 result="talk/cardinal/11.wav";
-		 break;
-		 case 12:
-		 result="talk/cardinal/12.wav";
-		 break;
-		 case 13:
-		 result="talk/cardinal/13.wav";
-		 break;
-		 case 14:
-		 result ="talk/cardinal/14.wav";
-		 break;
-		 case 15:
-		 result ="talk/cardinal/15.wav";
-		 break;
-		 case 16:
-		 result="talk/cardinal/16.wav";
-		 break;
-		 case 17:
-		 result="talk/cardinal/17.wav";
-		 break;
-		 case 18:
-		 result="talk/cardinal/18.wav";
-		 break;
-		 case 19:
-		 result="talk/cardinal/19.wav";
-		 break;
-		 case 20:
-		 result ="talk/cardinal/20.wav";
-		 case 21:
-		 result="talk/cardinal/21.wav";
-		 break;
-		 case 22:
-		 result="talk/cardinal/22.wav";
-		 break;
-		 case 23:
-		 result="talk/cardinal/23.wav";
-		 break;
-         default:
-           g_print ("default: hour Value is: %i\n", hour);
-	 }//switch start hour
-
-
-	return result;
-
-}
-
-char* convert_min_to_cardinal_string(int min){
-
-	char* result ="";
-
-	switch(min)
-     {
-	    case 1:
-	     //g_print("o wav");
-	    result="talk/cardinal/1.wav";
-		break;
-		case 2:
-		result="talk/cardinal/2.wav";
-		break;
-		case 3:
-		result="talk/cardinal/3.wav";
-		break;
-		case 4:
-		result="talk/cardinal/4.wav";
-		break;
-		case 5:
-		result="talk/cardinal/5.wav";
-		break;
-		case 6:
-		result="talk/cardinal/6.wav";
-		break;
-		case 7:
-		result="talk/cardinal/7.wav";
-		break;
-		case 8:
-		result="talk/cardinal/8.wav";
-		break;
-		case 9:
-		result="talk/cardinal/9.wav";
-		break;
-		case 10:
-		result ="talk/cardinal/10.wav";
-		break;
-		case 11:
-	     result="talk/cardinal/11.wav";
-		break;
-		case 12:
-		result="talk/cardinal/12.wav";
-		break;
-		case 13:
-		result="talk/cardinal/13.wav";
-		break;
-		case 14:
-		result="talk/cardinal/14.wav";
-		break;
-		case 15:
-		result="talk/cardinal/15.wav";
-		break;
-		case 16:
-		result="talk/cardinal/16.wav";
-		break;
-		case 17:
-		result="talk/cardinal/17.wav";
-		break;
-		case 18:
-		result="talk/cardinal/18.wav";
-		break;
-		case 19:
-		result ="talk/cardinal/19.wav";
-		break;
-
-		case 20:
-		result="talk/cardinal/20.wav";
-		break;
-		case 21:
-		result="talk/cardinal/21.wav";
-		break;
-		case 22:
-		result="talk/cardinal/22.wav";
-		break;
-		case 23:
-		result="talk/cardinal/23.wav";
-		break;
-		case 24:
-		result="talk/cardinal/24.wav";
-		break;
-		case 25:
-		result="talk/cardinal/25.wav";
-		break;
-		case 26:
-		result="talk/cardinal/26.wav";
-		break;
-		case 27:
-		result="talk/cardinal/27.wav";
-		break;
-		case 28:
-		result="talk/cardinal/28.wav";
-		break;
-		case 29:
-		result="talk/cardinal/29.wav";
-		break;
-
-		case 30:
-		result= "talk/cardinal/30.wav";
-		break;
-		case 31:
-		result= "talk/cardinal/31.wav";
-		break;
-		case 32:
-		result= "talk/cardinal/32.wav";
-		break;
-		case 33:
-		result= "talk/cardinal/33.wav";
-		break;
-		case 34:
-		result= "talk/cardinal/34.wav";
-		break;
-		case 35:
-		result= "talk/cardinal/35.wav";
-		break;
-		case 36:
-		result= "talk/cardinal/36.wav";
-		break;
-		case 37:
-		result= "talk/cardinal/37.wav";
-		break;
-		case 38:
-		result= "talk/cardinal/38.wav";
-		break;
-		case 39:
-		result= "talk/cardinal/39.wav";
-		break;
-
-		case 40:
-		result ="talk/cardinal/40.wav";
-		break;
-		case 41:
-		result ="talk/cardinal/41.wav";
-		break;
-		case 42:
-		result ="talk/cardinal/42.wav";
-		break;
-		case 43:
-		result ="talk/cardinal/43.wav";
-		break;
-		case 44:
-		result ="talk/cardinal/44.wav";
-		break;
-		case 45:
-		result ="talk/cardinal/45.wav";
-		break;
-		case 46:
-		result ="talk/cardinal/46.wav";
-		break;
-		case 47:
-		result ="talk/cardinal/47.wav";
-		break;
-		case 48:
-		result ="talk/cardinal/48.wav";
-		break;
-		case 49:
-		result ="talk/cardinal/49.wav";
-		break;
-
-		case 50:
-		result ="talk/cardinal/50.wav";
-		break;
-		case 51:
-		result ="talk/cardinal/51.wav";
-		break;
-		case 52:
-		result ="talk/cardinal/52.wav";
-		break;
-		case 53:
-		result ="talk/cardinal/53.wav";
-		break;
-		case 54:
-		result ="talk/cardinal/54.wav";
-		break;
-		case 55:
-		result ="talk/cardinal/55.wav";
-		break;
-		case 56:
-		result ="talk/cardinal/56.wav";
-		break;
-		case 57:
-		result ="talk/cardinal/57.wav";
-		break;
-		case 58:
-		result ="talk/cardinal/58.wav";
-		break;
-		case 59:
-		result ="talk/cardinal/59.wav";
-		break;
-
-		default:
-           g_print ("default: min value is: %i\n", min);
-		 break;
-     } //switch start min
-
-	return result;
-
-}
-
-char* voice_dictionary(char* word) {
-
-char* result="";
-
-	if (g_strcmp0(word,"activity")==0) {
-	result ="talk/a/activity.wav";
-    }
-
-	 if (g_strcmp0(word,"alert")==0) {
-	 result="talk/a/alert.wav";
-	 }
-
-	 if (g_strcmp0(word,"anniversary")==0) {
-	result="talk/a/anniversary.wav";
-	 }
-
-	 if (g_strcmp0(word,"appointment")==0) {
-	result="talk/a/appointment.wav";
-	 }
-
-	 //b words
-	 if (g_strcmp0(word,"bank")==0) {
-	 result="talk/b/bank.wav";
-	 }
-
-	 if (g_strcmp0(word,"birthday")==0) {
-	 result="talk/b/birthday.wav";
-	 }
-
-	 if (g_strcmp0(word,"boxing")==0) {
-	 result="talk/b/boxing.wav";
-	 }
-
-	 //c words
-	 if (g_strcmp0(word,"calendar")==0) {
-	 result="talk/c/calendar.wav";
-	 }
-
-	 if (g_strcmp0(word,"christmas")==0) {
-	 result="talk/c/christmas.wav";
-	 }
-
-	 //d words
-	 if (g_strcmp0(word,"day")==0) {
-	 result="talk/d/day.wav";
-	 }
-
-	 if (g_strcmp0(word,"dentist")==0) {
-	 result="talk/d/dentist.wav";
-	 }
-
-	 if (g_strcmp0(word,"doctor")==0) {
-	 result="talk/d/doctor.wav";
-	 }
-
-	 //e words
-	 if (g_strcmp0(word,"easter")==0) {
-	 result="talk/e/easter.wav";
-	 }
-
-	 if (g_strcmp0(word,"event")==0) {
-	 result="talk/e/event.wav";
-	 }
-
-	 if (g_strcmp0(word,"events")==0) {
-	 result="talk/e/events.wav";
-	 }
-
-	 //f words
-	 if (g_strcmp0(word,"family")==0) {
-	 result ="talk/f/family.wav";
-	 }
-
-	 if (g_strcmp0(word,"friends")==0) {
-	 result="talk/f/friends.wav";
-	 }
-
-	 if (g_strcmp0(word,"funeral")==0) {
-	 result="talk/f/funeral.wav";
-	 }
-
-	 //h words
-	 if (g_strcmp0(word,"halloween")==0) {
-	 result="talk/h/halloween.wav";
-	 }
-
-	 if (g_strcmp0(word,"holiday")==0) {
-	 result="talk/h/holiday.wav";
-	 }
-
-	 if (g_strcmp0(word,"hospital")==0) {
-	 result="talk/h/hospital.wav";
-	 }
-
-	 //i words
-	 if (g_strcmp0(word,"important")==0) {
-	 result="talk/i/important.wav";
-	 }
-
-	 if (g_strcmp0(word,"information")==0) {
-	 result="talk/i/information.wav";
-	 }
-
-	 //m words
-	 if (g_strcmp0(word,"meal")==0) {
-	 result="talk/m/meal.wav";
-	 }
-
-	 if (g_strcmp0(word,"medical")==0) {
-	 result="talk/m/medical.wav";
-	 }
-
-	 if (g_strcmp0(word,"meeting")==0) {
-	 result="talk/m/meeting.wav";
-	 }
-
-
-	 //n words
-	 if (g_strcmp0(word,"new")==0) {
-	 result="talk/n/new.wav";
-	 }
-
-	 if (g_strcmp0(word,"note")==0) {
-	 result="talk/n/note.wav";
-	 }
-
-	 //p words
-	 if (g_strcmp0(word,"party")==0) {
-	 result="talk/p/party.wav";
-	 }
-
-	 if (g_strcmp0(word,"payment")==0) {
-	 result="talk/p/payment.wav";
-	 }
-
-	 if (g_strcmp0(word,"priority")==0) {
-	 result="talk/p/priority.wav";
-	 }
-
-	  if (g_strcmp0(word,"public")==0) {
-	 result="talk/p/public.wav";
-	 }
-
-	 //q words
-	 //r words
-
-	 if (g_strcmp0(word,"reminder")==0) {
-	 result="talk/r/reminder.wav";
-	 }
-
-
-	 if (g_strcmp0(word,"restaurant")==0) {
-	 result="talk/r/restaurant.wav";
-	 }
-
-	  if (g_strcmp0(word,"retirement")==0) {
-	 result="talk/r/retirement.wav";
-	 }
-
-	 // s words
-
-	 // t words
-	 if (g_strcmp0(word,"talk")==0) {
-	 result="talk/t/talk.wav";
-	 }
-
-	 if (g_strcmp0(word,"travel")==0) {
-	 result="talk/t/travel.wav";
-	 }
-
-
-	 //v words
-	 if (g_strcmp0(word,"valentine")==0) {
-	 result="talk/v/valentine.wav";
-	 }
-
-	 if (g_strcmp0(word,"visit")==0) {
-	 result="talk/v/visit.wav";
-	 }
-
-	 // w words
-
-	  if (g_strcmp0(word,"walk")==0) {
-	 result="talk/w/walk.wav";
-	 }
-
-	 if (g_strcmp0(word,"wedding")==0) {
-	 result="talk/w/wedding.wav";
-	 }
-
-	  if (g_strcmp0(word,"work")==0) {
-	 result="talk/w/work.wav";
-	 }
-
-	 //y words
-	 if (g_strcmp0(word,"year")==0) {
-	 result="talk/y/year.wav";
-	 }
-
-return result;
-}
-
-
-
-static gpointer thread_aplaywav(gpointer user_data)
+//---------------------------------------------------------------------
+// Speaking
+//---------------------------------------------------------------------
+static gpointer thread_speak_func(gpointer user_data)
 {
 
-    gchar *file_name =user_data;
+	char* text =user_data;
+	gchar * command_str ="flite";
 
-   	char input[50];
-	strcpy(input, file_name);
-	//wavplay(input);
-    gchar* aplay_str ="aplay";
-    aplay_str=g_strconcat(aplay_str," ",input, NULL);
-    system(aplay_str);
+	if (g_file_test(g_build_filename("/usr/bin/", "flite", NULL), G_FILE_TEST_IS_REGULAR)) {
+
+		command_str= g_strconcat(command_str," -t "," '",text,"' ", NULL);
+		system(command_str);
+
+	}
+
+	else {
+		g_print("flite not installed\n");
+		//removed messagbox as being depreciated in gtk 4.10
+	}
 
     g_mutex_unlock (&lock); //thread mutex unlock
     return NULL;
-}
 
+}
 
 //---------------------------------------------------------------------
 // speak events
 //---------------------------------------------------------------------
 static void speak_events() {
 
-	 if(m_talk==0) return;
+	if(m_talk==0) return;
 
-	 int32_t sample_rate=8000;
-	 //gpointer pt_data;
-	 //gchar* list_str;
-	 int day_events_number=0;
+	char* speak_str ="";
+	char* speak_str_date ="";
+	char* speak_str_events="";
+	char* weekday_str="";
+	char* day_month_str="";
 
-	 //Check for talk directory
+	GDate* day_date;
+	day_date = g_date_new_dmy(m_day, m_month, m_year);
+	GDateWeekday weekday =g_date_get_weekday(day_date);
 
-	 gchar *cur_dir;
-	 cur_dir = g_get_current_dir ();
+	switch(weekday)
+	{
+	case G_DATE_MONDAY:
+	weekday_str="Monday";
+	break;
+	case G_DATE_TUESDAY:
+	weekday_str="Tuesday";
+	break;
+	case G_DATE_WEDNESDAY:
+	weekday_str="Wednesday";
+	break;
+	case G_DATE_THURSDAY:
+	weekday_str="Thursday";
+	break;
+	case G_DATE_FRIDAY:
+	weekday_str="Friday";
+	break;
+	case G_DATE_SATURDAY:
+	weekday_str="Saturday";
+	break;
+	case G_DATE_SUNDAY:
+	weekday_str="Sunday";
+	break;
+	default:
+	weekday_str="Unknown";
+	}//switch
 
-   //Check if dictionary directory exists
-	gchar* talk_directory = g_build_filename(cur_dir, "talk", NULL);
 
-	if (g_file_test(talk_directory, G_FILE_TEST_IS_DIR)==FALSE){
-		return;
+	gchar* day_str =	g_strdup_printf("%d",m_day);
+
+	day_month_str =g_strconcat(day_month_str,weekday_str," ", day_str, " ", NULL);
+
+	switch(m_month)
+	{
+	case G_DATE_JANUARY:
+	day_month_str =g_strconcat(day_month_str,"January ", NULL);
+	break;
+	case G_DATE_FEBRUARY:
+	day_month_str =g_strconcat(day_month_str,"February ", NULL);
+	break;
+	case G_DATE_MARCH:
+	day_month_str =g_strconcat(day_month_str,"March ", NULL);
+	break;
+	case G_DATE_APRIL:
+	day_month_str =g_strconcat(day_month_str,"April ", NULL);
+	break;
+	case G_DATE_MAY:
+	day_month_str =g_strconcat(day_month_str,"May ", NULL);
+	break;
+	case G_DATE_JUNE:
+	day_month_str =g_strconcat(day_month_str,"June ", NULL);
+	break;
+	case G_DATE_JULY:
+	day_month_str =g_strconcat(day_month_str,"July ", NULL);
+	break;
+	case G_DATE_AUGUST:
+	day_month_str =g_strconcat(day_month_str,"August ", NULL);
+	break;
+	case G_DATE_SEPTEMBER:
+	day_month_str =g_strconcat(day_month_str,"September ", NULL);
+	break;
+	case G_DATE_OCTOBER:
+	day_month_str =g_strconcat(day_month_str,"October ", NULL);
+	break;
+	case G_DATE_NOVEMBER:
+	day_month_str =g_strconcat(day_month_str,"November ", NULL);
+	break;
+	case G_DATE_DECEMBER:
+	day_month_str =g_strconcat(day_month_str,"December ", NULL);
+	break;
+	default:
+	day_month_str =g_strconcat(day_month_str,"Unknown ", NULL);
 	}
 
-	GList *wavlist=NULL;
-	gchar *dow_str=""; //day of week
-	gchar *day_str="";
-	gchar *month_str="";
-
-	dow_str=convert_date_to_weekday(m_day, m_month, m_year);
-
-	if (g_file_test(g_build_filename (cur_dir, dow_str, NULL), G_FILE_TEST_IS_REGULAR)) {
-			wavlist = g_list_append(wavlist, g_build_filename (cur_dir, dow_str, NULL));
-	    }
-	day_str=convert_day_to_ordinal_string(m_day);
-
-	if (g_file_test(g_build_filename (cur_dir, day_str, NULL), G_FILE_TEST_IS_REGULAR)) {
-			wavlist = g_list_append(wavlist, g_build_filename (cur_dir, day_str, NULL));
-	  }
-
-	month_str=convert_month_to_string(m_month);
-	if (g_file_test(g_build_filename (cur_dir, month_str, NULL), G_FILE_TEST_IS_REGULAR)) {
-			 wavlist = g_list_append(wavlist, g_build_filename (cur_dir, month_str, NULL));
-	  }
+	//speak_str= g_strconcat(speak_str, day_month_year_str,NULL);
+	speak_str_date =g_strconcat(speak_str_date, day_month_str, NULL);
 
 
-	int event_number=get_number_of_events();
-	//g_print("event number = %i\n",event_number);
 
-	//-----------------------------------------------------------------
-	// get and sort day events
-	//-----------------------------------------------------------------
+	int event_count=0;
+	Event e;
 
-   Event day_events[event_number];
-   Event e;
-   //load day events
-   int jj=0;
-   for (int i=0; i<m_store_size; i++)
+	for (int i=0; i<m_store_size; i++)
 	{
 		e=event_store[i];
-		if(m_year==e.year && m_month ==e.month && m_day==e.day)
-		{
-			day_events[jj] =e;
-			day_events_number=day_events_number+1;
-			jj++;
-		}//if
-		if(m_year!=e.year && m_month ==e.month && m_day==e.day && e.is_yearly)
-		{
-			//yearly events
-			day_events[jj] =e;
-			day_events_number=day_events_number+1;
-			jj++;
-		}
+	//normal events
+	if(m_year==e.year && m_month ==e.month && m_day==e.day)
+	{
+	event_count++;
+	}//if
+	//repeat year events
+	if(m_year!= e.year && m_month ==e.month && m_day==e.day && e.is_yearly==1)
+	{
+		event_count++;
+	}
 
 	}//for
 
-   //sort
+	//g_print("m_talk_event_number = %i\n",m_talk_event_number);
 
-   qsort (day_events, event_number, sizeof(Event), compare);
+	if (event_count==0) {
+	if(m_talk_event_number)
+	speak_str_events =g_strconcat(speak_str_events, " No events ", NULL);
+	}
+	else { //get time sorted event
 
-
-	//--------------------------------------------------------------
-
-   if(m_talk_event_number) {
-
-    if (event_number ==0) {
-    if (g_file_test(g_build_filename (cur_dir,"talk/n/no.wav", NULL), G_FILE_TEST_IS_REGULAR)) {
-    wavlist = g_list_append(wavlist, g_build_filename (cur_dir,"talk/n/no.wav", NULL));
+	if(m_talk_event_number)	{
+	char* event_number_str = g_strdup_printf("%d", event_count);
+	speak_str_events =g_strconcat(speak_str_events, " You have ",event_number_str, "events  ", NULL);
     }
-    if (g_file_test(g_build_filename (cur_dir,"talk/e/events.wav", NULL), G_FILE_TEST_IS_REGULAR)) {
-    wavlist = g_list_append(wavlist, g_build_filename (cur_dir,"talk/e/events.wav", NULL));
-    }
-    } //if no events
-    else if(event_number ==1){
-		//g_print("one event being added to wavlist\n");
-	if (g_file_test(g_build_filename (cur_dir,"talk/cardinal/1.wav", NULL), G_FILE_TEST_IS_REGULAR)) {
-	wavlist = g_list_append(wavlist, g_build_filename (cur_dir,"talk/cardinal/1.wav", NULL));
-	}
-	if (g_file_test(g_build_filename (cur_dir,"talk/e/event.wav", NULL), G_FILE_TEST_IS_REGULAR)) {
-	wavlist = g_list_append(wavlist, g_build_filename (cur_dir,"talk/e/event.wav", NULL));
-	}
-	} // if 1 event
 
-	else if(event_number ==2){
-	if (g_file_test(g_build_filename (cur_dir,"talk/cardinal/2.wav", NULL), G_FILE_TEST_IS_REGULAR)) {
-	wavlist = g_list_append(wavlist, g_build_filename (cur_dir,"talk/cardinal/2.wav", NULL));
-	}
-	if (g_file_test(g_build_filename (cur_dir,"talk/e/events.wav", NULL), G_FILE_TEST_IS_REGULAR)) {
-	wavlist = g_list_append(wavlist, g_build_filename (cur_dir,"talk/e/events.wav", NULL));
-	}
-	}
-	else if(event_number ==3){
-	if (g_file_test(g_build_filename (cur_dir,"talk/cardinal/3.wav", NULL), G_FILE_TEST_IS_REGULAR)) {
-	wavlist = g_list_append(wavlist, g_build_filename (cur_dir,"talk/cardinal/3.wav", NULL));
-	}
-	if (g_file_test(g_build_filename (cur_dir,"talk/e/events.wav", NULL), G_FILE_TEST_IS_REGULAR)) {
-	wavlist = g_list_append(wavlist, g_build_filename (cur_dir,"talk/e/events.wav", NULL));
-	}
-	}
-	else if(event_number ==4){
-	if (g_build_filename (cur_dir,"talk/cardinal/4.wav", NULL), G_FILE_TEST_IS_REGULAR) {
-	wavlist = g_list_append(wavlist, g_build_filename (cur_dir,"talk/cardinal/4.wav", NULL));
-	}
-	if (g_file_test(g_build_filename (cur_dir,"talk/e/events.wav", NULL), G_FILE_TEST_IS_REGULAR)) {
-	wavlist = g_list_append(wavlist, g_build_filename (cur_dir,"talk/e/events.wav", NULL));
-	}
-	}
-	else if(event_number ==5){
-	if ( g_file_test(g_build_filename (cur_dir,"talk/cardinal/5.wav", NULL), G_FILE_TEST_IS_REGULAR)) {
-	wavlist = g_list_append(wavlist, g_build_filename (cur_dir,"talk/cardinal/5.wav", NULL));
-	}
-	if (g_file_test(g_build_filename (cur_dir,"talk/e/events.wav", NULL), G_FILE_TEST_IS_REGULAR)) {
-	wavlist = g_list_append(wavlist, g_build_filename (cur_dir,"talk/e/events.wav", NULL));
-	}
-	}
-	else {
-	if (g_file_test(g_build_filename (cur_dir,"talk/m/many.wav", NULL), G_FILE_TEST_IS_REGULAR)) {
-	wavlist = g_list_append(wavlist, g_build_filename (cur_dir,"talk/m/many.wav", NULL));
-	}
-	if (g_file_test(g_build_filename (cur_dir,"talk/e/events.wav", NULL), G_FILE_TEST_IS_REGULAR)) {
-	wavlist = g_list_append(wavlist, g_build_filename (cur_dir,"talk/e/events.wav", NULL));
-	}
-	}
 
-   } //if m_talk_event_number
+	Event day_events[event_count];
 
-	//--------------------------------------------------------------------------------------
+	//load day events
+	int j=0;
 
-	gchar* str;
-	gchar** words;
-	//gchar* word;
-	gint j=0;
-	//GList *event_word_list=NULL;
+	for (int i=0; i<m_store_size; i++)
+	{
+		e=event_store[i];
+
+		//normal events
+		if(m_year==e.year && m_month ==e.month && m_day==e.day)
+		{
+			day_events[j] =e;
+			j++;
+		}//if
+
+		//repeat year events
+		if(m_year!= e.year && m_month ==e.month && m_day==e.day && e.is_yearly==1)
+		{
+			day_events[j] =e;
+			j++;
+		}
+
+
+
+	}//for
+
+	//sort
+
+	qsort (day_events, event_count, sizeof(Event), compare);
 
 	Event day_event;
 
-   for(int i=0; i<day_events_number; i++)
-   {
-	   day_event =day_events[i];
 
-	  // g_print("Get event time\n");
-
-	  //check for all day event here
-
-	   float start_time =day_event.start_time;
-	   //g_print("start_time = %f\n",start_time);
-
-	   float integral_part, fractional_part;
-	   fractional_part = modff(day_event.start_time, &integral_part);
-	   int start_hour =(int) integral_part; //start_hour
-	   fractional_part=round(fractional_part *100);
-	   int start_min=(int) (fractional_part); //start_min
-
-	   //g_print("start hour =%i\n",start_hour);
-	   //g_print("start min = %i\n",start_min);
-
-	   char* start_hour_str="";
-	   char* start_min_str="";
-
-	 //Time ----------------------------------------------------------
-
-	   if (m_talk_time) {
-		   if(day_event.is_allday) {
-			   //g_print("All day event\n");
-			   if (g_file_test(g_build_filename (cur_dir,"talk/a/all.wav", NULL), G_FILE_TEST_IS_REGULAR)) {
-				   wavlist = g_list_append(wavlist, g_build_filename (cur_dir,"talk/a/all.wav", NULL));
-			   }
-			   if (g_file_test(g_build_filename (cur_dir,"talk/d/day.wav", NULL), G_FILE_TEST_IS_REGULAR)) {
-				   wavlist = g_list_append(wavlist, g_build_filename (cur_dir,"talk/d/day.wav", NULL));
-			   }
-			   if (g_file_test(g_build_filename (cur_dir,"talk/e/event.wav", NULL), G_FILE_TEST_IS_REGULAR)) {
-				   wavlist = g_list_append(wavlist, g_build_filename (cur_dir,"talk/e/event.wav", NULL));
-			   }
-
-		   }
-		   else {
-
-
-			   //AM -------------------------------------------------------------
-
-			   if(start_hour >=1 && start_hour<=12) {
-
-				   start_hour_str=convert_hour_to_cardinal_string(start_hour);
-				   start_min_str=convert_min_to_cardinal_string(start_min);
-
-				   if (g_file_test(g_build_filename (cur_dir, start_hour_str, NULL), G_FILE_TEST_IS_REGULAR)) {
-					   wavlist = g_list_append(wavlist, g_build_filename (cur_dir, start_hour_str, NULL));
-				   }
-
-				   //if (g_file_test(g_build_filename (cur_dir, start_min_str, NULL), G_FILE_TEST_IS_REGULAR)) {
-				   //wavlist = g_list_append(wavlist, g_build_filename (cur_dir, start_min_str, NULL));
-				   //}
-
-
-				   if(start_min >=1 && start_min <= 9) {
-					   if (g_file_test(g_build_filename (cur_dir,"talk/o/o.wav", NULL), G_FILE_TEST_IS_REGULAR)) {
-						   wavlist = g_list_append(wavlist, g_build_filename (cur_dir,"talk/o/o.wav", NULL));}
-						   if (g_file_test(g_build_filename (cur_dir, start_min_str, NULL), G_FILE_TEST_IS_REGULAR)) {
-							   wavlist = g_list_append(wavlist, g_build_filename (cur_dir, start_min_str, NULL));
-						   }
-				   } else {
-					   if (g_file_test(g_build_filename (cur_dir, start_min_str, NULL), G_FILE_TEST_IS_REGULAR)) {
-						   wavlist = g_list_append(wavlist, g_build_filename (cur_dir, start_min_str, NULL));
-					   }
-
-				   }
-
-
-
-				   if (g_file_test(g_build_filename (cur_dir,"talk/a/am.wav", NULL), G_FILE_TEST_IS_REGULAR)) {
-					   wavlist = g_list_append(wavlist, g_build_filename (cur_dir,"talk/a/am.wav", NULL));
-				   }
-			   }
-
-
-
-			   //PM-------------------------------------------
-
-			   if (start_hour >=13 && start_hour<=23) {
-
-
-				   start_hour_str=convert_hour_to_cardinal_string(start_hour-12);
-				   start_min_str=convert_min_to_cardinal_string(start_min);
-
-				   if (g_file_test(g_build_filename (cur_dir, start_hour_str, NULL), G_FILE_TEST_IS_REGULAR)) {
-					   wavlist = g_list_append(wavlist, g_build_filename (cur_dir, start_hour_str, NULL));
-				   }
-
-				   //if (g_file_test(g_build_filename (cur_dir, start_min_str, NULL), G_FILE_TEST_IS_REGULAR)) {
-				   //wavlist = g_list_append(wavlist, g_build_filename (cur_dir, start_min_str, NULL));
-				   //}
-
-
-				   if(start_min >=1 && start_min <= 9) {
-					   if (g_file_test(g_build_filename (cur_dir,"talk/o/o.wav", NULL), G_FILE_TEST_IS_REGULAR)) {
-						   wavlist = g_list_append(wavlist, g_build_filename (cur_dir,"talk/o/o.wav", NULL));}
-						   if (g_file_test(g_build_filename (cur_dir, start_min_str, NULL), G_FILE_TEST_IS_REGULAR)) {
-							   wavlist = g_list_append(wavlist, g_build_filename (cur_dir, start_min_str, NULL));
-						   }
-				   } else {
-					   if (g_file_test(g_build_filename (cur_dir, start_min_str, NULL), G_FILE_TEST_IS_REGULAR)) {
-						   wavlist = g_list_append(wavlist, g_build_filename (cur_dir, start_min_str, NULL));
-					   }
-				   }
-
-				   if (g_file_test(g_build_filename (cur_dir,"talk/p/pm.wav", NULL), G_FILE_TEST_IS_REGULAR)) {
-					   wavlist = g_list_append(wavlist, g_build_filename (cur_dir,"talk/p/pm.wav", NULL));
-				   }
-			   }
-
-		   } //else has AM/PM time
-
-
-		}//if m_talk_time
-
-	 //now read out event tag words
-
-	 if(m_talk_tags) {
-
-	 GList *event_word_list=NULL;
-	 //str=day_event.type;
-	 str=day_event.summary;
-	  //g_print("summary = %s\n",str);
-	  words = g_strsplit (str, " ", 0); //split on space
-	j=0;
-	while(words[j] != NULL)
+	for(int i=0; i<event_count; i++)
 	{
-	//g_print("words = %s\n",words[j]);
-	event_word_list = g_list_append(event_word_list, words[j]);
-	j++;
-	} //while loop words
+	//loop through day events
+	char *starts;
+	char *start_time_str="";
+	gchar *time_str="";
+	char *summary_str="";
+	char *location_str="";
+	gchar *starthour_str = "";
+	gchar *startmin_str = "";
+	char *endhour_str = "";
+	char *endmin_str = "";
+	day_event =day_events[i];
+	if (day_event.is_allday) {
+	time_str="All day Event. ";
+	}
+	else {
 
- 	//cycle through the event type word list
-	gpointer pt_event_word_list;
-	gchar* event_word_list_str;
-	gchar* event_word_list_str_lower;
+	float start_time =day_event.start_time;
+	float integral_part, fractional_part;
+	fractional_part = modff(day_event.start_time, &integral_part);
+	int start_hour =(int) integral_part; //start_hour
+	fractional_part=round(fractional_part *100);
+	int start_min=(int) (fractional_part); //start_min
 
-	//g_print("g_list length = %i\n",g_list_length(event_word_list));
+	//g_print("start_hour = %i\n",start_hour);
+	//g_print("start_min = %i\n",start_min);
+	//starthour_str= "fourteen";
+	//starthour_str = g_strdup_printf("%d", start_hour);
+    //startmin_str = g_strdup_printf("%d", start_min);
+	//time_str = g_strconcat(time_str, starthour_str," ",NULL);
 
-	for(int i=0;i <g_list_length(event_word_list);i++)
+	starthour_str =convert_number_to_string(start_hour);
+	startmin_str =convert_number_to_string(start_min);
+	if (start_min <10){
+     time_str = g_strconcat(time_str, starthour_str, "  ", NULL);
+     time_str = g_strconcat(time_str, "zero ", startmin_str,".   ",NULL);
+    }
+
+    else {
+	 time_str = g_strconcat(time_str, starthour_str,"  ",NULL);
+	 time_str = g_strconcat(time_str, startmin_str,".  ",NULL);
+    }
+
+	} //else not allday
+
+
+	summary_str=day_event.summary;
+	summary_str =remove_punctuations(summary_str);
+
+	if(strlen(day_event.location) ==0)
 	{
-		pt_event_word_list=g_list_nth_data(event_word_list,i);
-		event_word_list_str=(gchar *)pt_event_word_list;
-		event_word_list_str_lower= g_ascii_strdown(event_word_list_str, -1);
+	location_str="";
+	}
+	else {
+	location_str = g_strconcat(location_str, "  ",day_event.location, ".", NULL);
+	}
+	location_str =remove_punctuations(location_str);
 
-		char* voice_str =voice_dictionary(event_word_list_str_lower);
-		//g_print("voice_str = %s\n",voice_str);
-
-		if (g_file_test(g_build_filename (cur_dir,voice_str, NULL), G_FILE_TEST_IS_REGULAR)) {
-			wavlist = g_list_append(wavlist, g_build_filename (cur_dir,voice_str, NULL));
-		}
-
-     }//for_list_length
-
-    g_list_free(event_word_list);
-
-      } //m_tags
+	//speak_str_events= g_strconcat(speak_str_events, time_str, summary_str, ".  ",location_str,". ", NULL);
 
 
-      if(m_talk_priority) {
+	//always talk summary and date
 
-		  if(day_event.priority)
-		  {
-			   if (g_file_test(g_build_filename (cur_dir,"talk/h/high.wav", NULL), G_FILE_TEST_IS_REGULAR)) {
-				   wavlist = g_list_append(wavlist, g_build_filename (cur_dir,"talk/h/high.wav", NULL));
-			   }
-			   if (g_file_test(g_build_filename (cur_dir,"talk/p/priority.wav", NULL), G_FILE_TEST_IS_REGULAR)) {
-				   wavlist = g_list_append(wavlist, g_build_filename (cur_dir,"talk/p/priority.wav", NULL));
-			   }
-		  }
-	  }
-
-   } //for dayevents
-
-
-	//--------------------------------------------------------------
-	//merge and talk
-	//--------------------------------------------------------------
-	gpointer pt_data;
-	gchar* list_str;
-
-	char* merge_file ="/tmp/talkout.wav";
-	int num_files = g_list_length(wavlist);
-	char* file_names[g_list_length(wavlist)];
-
-	for(int i=0;i<g_list_length(wavlist);i++) //iterate through GList wavlist
-	{
-	pt_data=g_list_nth_data(wavlist,i);
-	list_str=(char *)pt_data;
-	file_names[i] = list_str;	//populate char* array
-	g_print("list_str =%s\n",list_str);
-	//printf("main: locate file_names[%d] = '%s'\n",i,file_names[i]);
+	if (m_talk_time){
+	speak_str_events= g_strconcat(speak_str_events, time_str, summary_str, ". ", NULL);
+    }
+    else {
+		speak_str_events= g_strconcat(speak_str_events, summary_str, ".  ", NULL);
 	}
 
-	merge_wav_files2(merge_file, num_files, file_names,sample_rate);
+	if(m_talk_location) {
+		speak_str_events= g_strconcat(speak_str_events, location_str,". ", NULL);
+	}
 
-	g_list_free(wavlist);
-    g_free (cur_dir);
 
-	//play audio in a thread
-	GThread *thread_audio;
-	gchar* wav_file ="/tmp/talkout.wav";
+	if(m_talk_priority && day_event.priority) {
+	speak_str_events=g_strconcat(speak_str_events, " high priority.  ", NULL);
+	}
+
+	} //for i day events
+
+	} //else if event_count !=0
+
+	//check for overlap
+	if(m_talk_overlap && check_day_events_for_overlap())
+	{
+		speak_str_events=g_strconcat(speak_str_events, " You have overlapping events.  ", NULL);
+	}
+
+	speak_str=g_strconcat(speak_str_date, speak_str_events, NULL);
+	GThread *thread_speak;
+	if(m_talk) {
 	g_mutex_lock (&lock);
-    thread_audio = g_thread_new(NULL, thread_aplaywav, wav_file);
-	g_thread_unref (thread_audio);
+	thread_speak = g_thread_new(NULL, thread_speak_func, speak_str);
+	}
+	g_thread_unref (thread_speak);
 
-	//--------------------------------------------------------------
 }
 
 
+//------------------------------------------------------------------
+// Check day for event overlap (include repeating events)
+//-------------------------------------------------------------------
+
+bool overlap(Event event1, Event event2) {
+
+    float A = event1.start_time;
+    float B =event1.end_time;
+    float C =event2.start_time;
+    float D =event2.end_time;
+
+    float maxAC = fmaxf(A, C);
+    float minBD = fminf(B,D);
+
+    float overlap =minBD-maxAC;
+
+    if (overlap<0) return FALSE;
+    else return TRUE;
+
+}
+
+
+gboolean check_day_events_for_overlap() {
+
+	int day_event_number=0;
+	Event e;
+	for (int i=0; i<m_store_size; i++)
+	{
+	e=event_store[i];
+	//normal events
+	if(m_year==e.year && m_month ==e.month && m_day==e.day)
+	{
+	day_event_number++;
+	}//if
+	//year repeat events
+	if(m_year!= e.year && m_month ==e.month && m_day==e.day && e.is_yearly==1)
+	{
+	day_event_number++;
+	}//if
+	}//for
+
+	if (day_event_number<=1) return FALSE; //one or zero events
+
+	//load day events
+	Event day_events[day_event_number];
+	int jj=0;
+
+	for (int i=0; i<m_store_size; i++)
+	{
+	e=event_store[i];
+
+	//normal events
+	if(m_year==e.year && m_month ==e.month && m_day==e.day)
+	{
+	day_events[jj] =e;
+	//day_events_number=day_events_number+1;
+	jj++;
+	}//if
+	//year repeat events
+	if(m_year!= e.year && m_month ==e.month && m_day==e.day && e.is_yearly==1)
+	{
+	day_events[jj] =e;
+	//day_events_number=day_events_number+1;
+	jj++;
+	}//if
+	}//for
+
+	// Now go through day events checking for overlap
+
+	for (int i = 1; i < day_event_number; i++ )
+    {
+
+        Event a = day_events[i];
+        for (int j = 0; j < i; j++ )
+        {
+          Event b = day_events[j];
+	      bool result =overlap(a,b);
+	      if (result) return TRUE;
+
+        } //j
+    } //i
+
+	return FALSE;
+}
+//---------------------------------------------------------------------
+
+
+
+
+
+
+//--------------------------------------------------------------------------------
+// Add event
+//---------------------------------------------------------------------------------
 static void callbk_add(GtkButton *button, gpointer  user_data){
 
     //g_print("add button clicked");
@@ -2632,7 +2124,7 @@ static void callbk_about(GSimpleAction * action, GVariant *parameter, gpointer u
 	gtk_widget_set_size_request(about_dialog, 200,200);
     gtk_window_set_modal(GTK_WINDOW(about_dialog),TRUE);	
 	gtk_about_dialog_set_program_name(GTK_ABOUT_DIALOG(about_dialog), "Tiki Calendar (Gtk4 version)");
-	gtk_about_dialog_set_version (GTK_ABOUT_DIALOG(about_dialog), "Version 0.2.0");
+	gtk_about_dialog_set_version (GTK_ABOUT_DIALOG(about_dialog), "Version 0.2.1");
 	gtk_about_dialog_set_copyright(GTK_ABOUT_DIALOG(about_dialog),"Copyright © 2023");
 	gtk_about_dialog_set_comments(GTK_ABOUT_DIALOG(about_dialog),"Personal calendar"); 
 	gtk_about_dialog_set_license_type (GTK_ABOUT_DIALOG(about_dialog), GTK_LICENSE_GPL_2_0);
@@ -2666,9 +2158,10 @@ static void callbk_set(GtkButton *button, gpointer  user_data){
     GtkWidget *check_button_talk_startup= g_object_get_data(G_OBJECT(button), "check-button-talk-startup-key");
     GtkWidget *check_button_talk_event_number= g_object_get_data(G_OBJECT(button), "check-button-talk-event-number-key");
     GtkWidget *check_button_talk_times= g_object_get_data(G_OBJECT(button), "check-button-talk-times-key");
-    GtkWidget *check_button_talk_tags= g_object_get_data(G_OBJECT(button), "check-button-talk-tags-key");
+    //GtkWidget *check_button_talk_summary= g_object_get_data(G_OBJECT(button), "check-button-talk-summary-key");
+	GtkWidget *check_button_talk_location= g_object_get_data(G_OBJECT(button), "check-button-talk-location-key");
     GtkWidget *check_button_talk_priority= g_object_get_data(G_OBJECT(button), "check-button-talk-priority-key");
-    //GtkWidget *check_button_talk_overlap= g_object_get_data(G_OBJECT(button), "check-button-talk-overlap-key");
+    GtkWidget *check_button_talk_overlap= g_object_get_data(G_OBJECT(button), "check-button-talk-overlap-key");
     GtkWidget *check_button_reset_all= g_object_get_data(G_OBJECT(button), "check-button-reset-all-key");
 
 
@@ -2680,9 +2173,10 @@ static void callbk_set(GtkButton *button, gpointer  user_data){
 	m_talk_at_startup=gtk_check_button_get_active (GTK_CHECK_BUTTON(check_button_talk_startup));
 	m_talk_event_number=gtk_check_button_get_active (GTK_CHECK_BUTTON(check_button_talk_event_number));
 	m_talk_time=gtk_check_button_get_active(GTK_CHECK_BUTTON(check_button_talk_times));
-	m_talk_tags=gtk_check_button_get_active(GTK_CHECK_BUTTON(check_button_talk_tags));
+	//m_talk_summary=gtk_check_button_get_active(GTK_CHECK_BUTTON(check_button_talk_summary));
+	m_talk_location=gtk_check_button_get_active(GTK_CHECK_BUTTON(check_button_talk_location));
 	m_talk_priority=gtk_check_button_get_active(GTK_CHECK_BUTTON(check_button_talk_priority));
-	//m_talk_overlap=gtk_check_button_get_active(GTK_CHECK_BUTTON(check_button_talk_overlap));
+	m_talk_overlap=gtk_check_button_get_active(GTK_CHECK_BUTTON(check_button_talk_overlap));
 
 	m_talk_reset=gtk_check_button_get_active(GTK_CHECK_BUTTON(check_button_reset_all));
 
@@ -2692,7 +2186,8 @@ static void callbk_set(GtkButton *button, gpointer  user_data){
 	m_talk_at_startup=1;
 	m_talk_event_number=1;
 	m_talk_time=1;
-	m_talk_tags=1;
+	//m_talk_summary=1;
+	m_talk_location=0;
 	m_frame=0;
 	m_show_end_time=0;
 	m_talk_priority=0;
@@ -2720,17 +2215,18 @@ static void callbk_preferences(GSimpleAction* action, GVariant *parameter,gpoint
 	
 	GtkWidget *dialog; 
 	GtkWidget *box; 
-	gint response; 
+
 	
 	//Check buttons
 	GtkWidget *check_button_talk;	
 	GtkWidget *check_button_talk_startup;
 	GtkWidget *check_button_talk_event_number;
 	GtkWidget *check_button_talk_times;
-	GtkWidget *check_button_talk_tags;
+	//GtkWidget *check_button_talk_summary;
+	GtkWidget *check_button_talk_location;
 
 	GtkWidget *check_button_talk_priority;
-	//GtkWidget *check_button_talk_overlap; //todo
+	GtkWidget *check_button_talk_overlap;
 
 	GtkWidget *check_button_calendar_grid;
 	GtkWidget *check_button_end_time;
@@ -2757,9 +2253,10 @@ static void callbk_preferences(GSimpleAction* action, GVariant *parameter,gpoint
 	check_button_talk_startup = gtk_check_button_new_with_label ("Talk At Startup");
 	check_button_talk_event_number = gtk_check_button_new_with_label ("Talk Event Number");
 	check_button_talk_times = gtk_check_button_new_with_label ("Talk Time");
-	check_button_talk_tags = gtk_check_button_new_with_label ("Use Speech Tags");
+	//check_button_talk_summary = gtk_check_button_new_with_label ("Talk Summary");
+	check_button_talk_location = gtk_check_button_new_with_label ("Talk Location");
 	check_button_talk_priority = gtk_check_button_new_with_label ("Talk Priority");
-	//check_button_talk_overlap = gtk_check_button_new_with_label ("Overlap Alert");
+	check_button_talk_overlap = gtk_check_button_new_with_label ("Overlap Alert");
 	check_button_reset_all = gtk_check_button_new_with_label ("Reset All");
 
 	gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_calendar_grid), m_frame);
@@ -2769,11 +2266,12 @@ static void callbk_preferences(GSimpleAction* action, GVariant *parameter,gpoint
 	gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_talk), m_talk);
 	gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_talk_startup), m_talk_at_startup);
 	gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_talk_times), m_talk_time);
-	gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_talk_tags), m_talk_tags);
+	//gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_talk_summary), m_talk_summary);
+	gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_talk_location), m_talk_location);
 
 	gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_talk_event_number), m_talk_event_number);
 	gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_talk_priority), m_talk_priority);
-	//gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_talk_overlap), m_talk_overlap);
+	gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_talk_overlap), m_talk_overlap);
 	gtk_check_button_set_active (GTK_CHECK_BUTTON(check_button_reset_all), m_talk_reset);
 	
 	g_object_set_data(G_OBJECT(button_set), "dialog-key",dialog);
@@ -2784,10 +2282,11 @@ static void callbk_preferences(GSimpleAction* action, GVariant *parameter,gpoint
 	g_object_set_data(G_OBJECT(button_set), "check-button-talk-key",check_button_talk);
 	g_object_set_data(G_OBJECT(button_set), "check-button-talk-startup-key",check_button_talk_startup);
 	g_object_set_data(G_OBJECT(button_set), "check-button-talk-times-key",check_button_talk_times);
-	g_object_set_data(G_OBJECT(button_set), "check-button-talk-tags-key",check_button_talk_tags);
+	//g_object_set_data(G_OBJECT(button_set), "check-button-talk-summary-key",check_button_talk_summary);
+	g_object_set_data(G_OBJECT(button_set), "check-button-talk-location-key",check_button_talk_location);
 	g_object_set_data(G_OBJECT(button_set), "check-button-talk-event-number-key",check_button_talk_event_number);
 	g_object_set_data(G_OBJECT(button_set), "check-button-talk-priority-key",check_button_talk_priority);
-	//g_object_set_data(G_OBJECT(dialog), "check-button-talk-overlap-key",check_button_talk_overlap);
+	g_object_set_data(G_OBJECT(button_set), "check-button-talk-overlap-key",check_button_talk_overlap);
 		
 	g_object_set_data(G_OBJECT(button_set), "check-button-reset-all-key",check_button_reset_all);
 	
@@ -2798,9 +2297,10 @@ static void callbk_preferences(GSimpleAction* action, GVariant *parameter,gpoint
 	gtk_box_append(GTK_BOX(box), check_button_talk_startup);
 	gtk_box_append(GTK_BOX(box), check_button_talk_event_number);
 	gtk_box_append(GTK_BOX(box), check_button_talk_times);
-	gtk_box_append(GTK_BOX(box), check_button_talk_tags);
+	//gtk_box_append(GTK_BOX(box), check_button_talk_summary);
+	gtk_box_append(GTK_BOX(box), check_button_talk_location);
 	gtk_box_append(GTK_BOX(box), check_button_talk_priority);
-	//gtk_box_append(GTK_BOX(box), check_button_talk_overlap); //todo
+	gtk_box_append(GTK_BOX(box), check_button_talk_overlap);
 	gtk_box_append(GTK_BOX(box), check_button_reset_all);
 	gtk_box_append(GTK_BOX(box), button_set);
 
@@ -2864,15 +2364,20 @@ static void callbk_info(GSimpleAction *action, GVariant *parameter,  gpointer us
 
 	GtkWidget *label_work_dir;
 	GtkWidget *label_working_dir;
-		
+	GtkWidget *label_flite;
+
 	GSettings *settings;
-                                               
-   dialog = gtk_dialog_new_with_buttons ("Information", GTK_WINDOW(window), 
-   GTK_DIALOG_MODAL|GTK_DIALOG_DESTROY_WITH_PARENT,
-   "Close", GTK_RESPONSE_CLOSE,
-   NULL);                                         
-   
-	gtk_window_set_default_size(GTK_WINDOW(dialog),380,100);  
+
+
+	/* dialog = gtk_dialog_new_with_buttons ("Information", GTK_WINDOW(window),
+	 *  GTK_DIALOG_MODAL|GTK_DIALOG_DESTROY_WITH_PARENT,
+	 *  "Close", GTK_RESPONSE_CLOSE,
+	 *  NULL);     */
+
+	dialog =gtk_window_new(); //gtk_dialog_new_with_buttons to be deprecated gtk4.10
+
+	gtk_window_set_default_size(GTK_WINDOW(dialog),380,100);
+	gtk_window_set_title (GTK_WINDOW (dialog), "Information");
 	
 	box =gtk_box_new(GTK_ORIENTATION_VERTICAL,1);  
 	gtk_window_set_child (GTK_WINDOW (dialog), box);
@@ -2890,7 +2395,7 @@ static void callbk_info(GSimpleAction *action, GVariant *parameter,  gpointer us
 	label_desktop_font=gtk_label_new(desktop_str); 
 	
 	gdouble sf =g_settings_get_double (settings,"text-scaling-factor");    
-    //g_print("scale factor =%0.1lf\n",sf);
+	//g_print("scale factor =%0.1lf\n",sf);
 	char* gnome_text_scale_factor ="Gnome Text Scale Factor = ";
 	char* font_scale_value_str = g_strdup_printf("%0.2lf", sf);
 	gnome_text_scale_factor=g_strconcat(gnome_text_scale_factor, font_scale_value_str,NULL); 
@@ -2903,17 +2408,34 @@ static void callbk_info(GSimpleAction *action, GVariant *parameter,  gpointer us
 	label_work_dir=gtk_label_new("Working Directory"); 
 	label_working_dir=gtk_label_new(dir_str); 
 	//g_print("current directory = %s\n", cur_dir);
-	
+
+
+	//check for flite
+
+
+	gchar* flite_str="";
+	if(g_file_test(g_build_filename("/usr/bin/", "flite", NULL), G_FILE_TEST_IS_REGULAR))
+	{
+		flite_str = g_strconcat(flite_str, "Flite is installed",NULL);
+	}
+	else
+	{
+		flite_str = g_strconcat(flite_str, "Flite not installed. Install Flite for speech.",NULL);
+	}
+
+	label_flite=gtk_label_new(flite_str);
+
 	gtk_box_append(GTK_BOX(box), label_record_number);
 	gtk_box_append(GTK_BOX(box),label_desktop_font);
 	gtk_box_append(GTK_BOX(box),label_gnome_text_scale);
+	gtk_box_append(GTK_BOX(box),label_flite);
 	gtk_box_append(GTK_BOX(box),label_work_dir);
 	gtk_box_append(GTK_BOX(box),label_working_dir);
-	
-	//set_widget_font_size(dialog);
+
+
 	gtk_window_present (GTK_WINDOW (dialog));
-	g_signal_connect (dialog, "response", G_CALLBACK (gtk_window_destroy), NULL);
- 	
+	//g_signal_connect (dialog, "response", G_CALLBACK (gtk_window_destroy), NULL);
+
 }
 //----------------------------------------------------------------
 // Callback delete all response

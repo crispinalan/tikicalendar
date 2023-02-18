@@ -9,10 +9,10 @@ Tiki Calendar is a Linux personal desktop calendar developed using C and [Gtk4](
 
 * built with Gtk4.6
 * event summary, location, start and end time can be entered and edited
-* button grid month calendar which allows days with events to be marked
+* bespoke month calendar which allows days with events to be marked
 * priority and is yearly can be used
 * csv file storage with memory dynamically allocated for up to 5000 records
-* audio for speaking the date and speech tags
+* speech synthesizer
 * binary for 64-bit Gtk4 distributions
 
 
@@ -32,33 +32,32 @@ or double click on the tikicalendar file. Make sure it has executable permission
 
 Use a menu editor such as [MenuLibre](https://github.com/bluesabre/menulibre) to create a launcher for Tiki Calendar.
 
-The database called "eventsdb.csv" is located in the working directory. With Tiki Calendar you can use the following menu item
-
-```
-Help->Information
-```
-to show the current working directory where the events database is located.
+The database called "eventsdb.csv" is located in the working directory. With Tiki Calendar you can use the information menu item
+information to show the current working directory where the events database should be located.
 
 ## Calendar Usage
 
 ### Adding New Event
 
-* Select event date using the calendar.
-* Click the New button on the headerbar to invoke the "New Event" dialog.
-* Enter the event title.
-* Enter the location.
-* Enter start and end times.
-* Events are sorted by start time when displayed.
-* A colour marker is placed on a day in the calendar which has an event.
-* Navigate through the year using the calendar to add events.
+* Select event date using the calendar
+* Click the New button on the headerbar to invoke the "New Event" dialog
+* Enter the event summary
+* Enter the location
+* Enter start and end times
+* Events are sorted by start time when displayed
+* An asterisk marker is placed on a day in the calendar which has an event
+* The today date is marked with square brackets []
+* Navigate through the year using the calendar to add events
 
 ![](tikicalendar-new-event.png)
 
 
 ### Editing Existing Event
 
-* Select the event in the list view and click the Edit button on the headerbar to edit.
-* Change details as appropriate.
+* Select the event in the list view and click the Edit button on the headerbar to edit
+* Change details as appropriate
+
+![](tikicalendar-edit-event.png)
 
 ### Preferences
 
@@ -71,39 +70,19 @@ You can show a calendar grid and event end-times in the list view. Talk options 
 
 ## Talking
 
-Tiki Calendar is not meant to be a talking calendar. See my [Talk Calendar](https://github.com/crispinalan/talkcalendar) Qt project for a talking calendar. However, it does have some limited speech capability for reading out the dates and speech tags. Ensure that the talk directory containing speech wav files is located in the current working directory.
+Tiki Calendar was not intented to be a talking calendar but I have added some speech capability using Flite which is a free lightweight speech synthesizer. You need to install Flite to enable talking.
 
-* Enable talking in Preferences
+```
+sudo apt install flite
+```
+* Enable talking in the Preferences dialog
+* Enable talk details to be spoken
 * Click on a calendar date with events
-* Press the spacebar to read out the selected date, event number, event times and any speech tags if used
-* Enable "Talk At Startup" in the preferences dialog to read out the date for the current day and other details when the calendar is started
+* Press the spacebar to read out the event(s) for the selected date
+* Enable "Talk At Startup" in the preferences dialog to read out date and event details when the calendar is started
 
+The use of Flite replaces the previous date/tag reader code which was based on concatenating pre-recorded wav files. Use the information menu item to check if Flite is installed on your system.
 
-### Speech Tags
-
-A speech tag is a keyword (e.g. birthday) which if added into the title text is read out by Tiki Calendar to give an indication of the type of event.
-
-The following tag words have been implemented relating to personal events
-
-```
-    activity, alert, anniversary, appointment,
-    bank, birthday, boxing,
-    calendar, christmas,
-    day, dentist, doctor,
-    easter, event, events,
-    family, friends, funeral,
-    halloween, holiday, hospital,
-    important, information,
-    meal, medical, meeting,
-    new, note,
-    party, payment, priority, public
-    reminder, restaurant retirement,
-    travel,
-    valentine, visit,
-    walk,wedding, work,
-    year
-```
-Event speech tagging can be effective for a quick audio overview of day events. You can combine speech tags. Examples include  "public holiday", "christmas day", "new year", "doctor appointment", "payment reminder" etc. If no speech tag is recognised then nothing is read out.
 
 ### Information
 
@@ -174,6 +153,7 @@ make
 ./tikicalendar
 ```
 
+
 ## History
 
 This is a hobby project under development to learn Gtk programming.
@@ -188,7 +168,7 @@ I developed this calendar application to learn Gtk as at the time I was concerne
 I have been using GTk4.6.6 for developing Tiki Calendar. To determine the version of Gtk4 running on a Linux system use the following terminal command.
 
 ```
-dpkg -l | grep libgtk
+dpkg -l | grep libgtk*
 ```
 
 Gtk have announced on their [Gtk4 api website](https://docs.gtk.org/gtk4/) that the following classes
@@ -265,9 +245,9 @@ Other depreciations include "gtk_application_set_app_menu()" as discussed [here]
 
 ## Libadwaita
 
-From what I can make out libadwaita is a GNOME specific version of Gtk4 which takes control of the look and feel of the user interface. It seems that you have to use a GNOME project source code template which replaces GTK_TYPE_APPLICATION with ADW_TYPE_APPLICATION. The Gtk application header #include <gtk/gtk.h> has to be changed to #include <libadwaita.h> and the build system has be modified to find the libadwaita library. Otherwise, libadwaita uses the Gtk API but the application style is different with windows for example having rounded corners. It also adds things like notifications and animations.
+From what I can make out libadwaita is a GNOME specific version of Gtk4 which takes control of the look and feel of the user interface. It seems that you have to use a GNOME project source code template which replaces GTK_TYPE_APPLICATION with ADW_TYPE_APPLICATION. The Gtk application header #include <gtk/gtk.h> has to be changed to #include <libadwaita.h> and the build system has be modified to find the libadwaita library. Otherwise, libadwaita uses the Gtk API but the application style is different with windows, for example, having rounded corners. It also adds things like notifications and animations.
 
-This is not a libadwaita project but a Gtk4 only project. The project focus is on improving the current code base, removing functions which are to be deprecated Gtk4.10 and adding further calendar features.
+This is not a libadwaita project but a Gtk4 only project. The project focus is on improving the current code base, removing functions which are to be deprecated in Gtk4.10 and adding further calendar features.
 
 
 ## Versioning
@@ -299,3 +279,4 @@ The Gtk4.0 GUI toolkit is licensed using LGPLv2.1.  Consequently, Tiki Calendar 
 
 * [Gio API](https://docs.gtk.org/gio/index.html)
 
+* [Flite](http://www.festvox.org/flite/) (festival-lite) is a small fast portable speech synthesis system. It is an official Debian package and labeled [DFGS free](https://blends.debian.org/accessibility/tasks/speechsynthesis).
