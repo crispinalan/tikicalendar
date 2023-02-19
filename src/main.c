@@ -127,11 +127,12 @@ static int m_priority=0;
 static int m_is_yearly=0;
 static int m_is_allday=0;
 
-static GListStore *m_store;
+static GListStore *m_store; //dont use gtkListStore as being depreciated
 
 static int m_id_selection=-1;
 
-//todo: write a Gobject calendar event class
+//todo: write a Gobject calendar event class but use struct for now
+//dealing with gtk4.10 depreciations first
 typedef struct {
 	int id;	
 	char summary[101];
@@ -544,9 +545,6 @@ static int get_number_of_events()
  return event_count;
 }
 
-//--------------------------------------------------------------------
-// new event
-//---------------------------------------------------------------------
 
 static void callbk_check_button_allday_toggled (GtkCheckButton *check_button, gpointer user_data)
 {
@@ -996,10 +994,6 @@ static void speak_events() {
 
 	//g_print("start_hour = %i\n",start_hour);
 	//g_print("start_min = %i\n",start_min);
-	//starthour_str= "fourteen";
-	//starthour_str = g_strdup_printf("%d", start_hour);
-    //startmin_str = g_strdup_printf("%d", start_min);
-	//time_str = g_strconcat(time_str, starthour_str," ",NULL);
 
 	if(m_12hour_format) {
 
@@ -2213,7 +2207,7 @@ static void callbk_about(GSimpleAction * action, GVariant *parameter, gpointer u
 	gtk_widget_set_size_request(about_dialog, 200,200);
     gtk_window_set_modal(GTK_WINDOW(about_dialog),TRUE);	
 	gtk_about_dialog_set_program_name(GTK_ABOUT_DIALOG(about_dialog), "Tiki Calendar (Gtk4 version)");
-	gtk_about_dialog_set_version (GTK_ABOUT_DIALOG(about_dialog), "Version 0.2.2");
+	gtk_about_dialog_set_version (GTK_ABOUT_DIALOG(about_dialog), "Version 0.2.3");
 	gtk_about_dialog_set_copyright(GTK_ABOUT_DIALOG(about_dialog),"Copyright © 2023");
 	gtk_about_dialog_set_comments(GTK_ABOUT_DIALOG(about_dialog),"Personal calendar"); 
 	gtk_about_dialog_set_license_type (GTK_ABOUT_DIALOG(about_dialog), GTK_LICENSE_GPL_2_0);
@@ -2222,8 +2216,7 @@ static void callbk_about(GSimpleAction * action, GVariant *parameter, gpointer u
 	gtk_about_dialog_set_authors(GTK_ABOUT_DIALOG(about_dialog), authors);
 		
 	gtk_about_dialog_set_logo_icon_name(GTK_ABOUT_DIALOG(about_dialog), "x-office-calendar");
-	
-	//set_widget_font_size(about_dialog);
+
 	gtk_widget_show(about_dialog);	
 		
 }
@@ -2421,43 +2414,6 @@ static void callbk_preferences(GSimpleAction* action, GVariant *parameter,gpoint
 	
 }
 
-
-//-----------------------------------------------------------------
-// Keyboard shortcuts
-//-----------------------------------------------------------------
-
-static void callbk_shortcuts(GSimpleAction * action, GVariant *parameter, gpointer user_data){
-
-	GtkWidget *window =user_data;
-	GtkWidget *dialog; 
-	GtkWidget *box; 
-	gint response; 
-	
-	//labels 	
-	GtkWidget *label_speak_sc;
-	GtkWidget *label_home_sc;
-	
-	dialog = gtk_dialog_new_with_buttons ("Information", GTK_WINDOW(window), 
-	GTK_DIALOG_MODAL|GTK_DIALOG_DESTROY_WITH_PARENT,
-	"Close", GTK_RESPONSE_CLOSE,
-	NULL);                                         
-	
-	gtk_window_set_default_size(GTK_WINDOW(dialog),380,100);  
-	
-	box =gtk_box_new(GTK_ORIENTATION_VERTICAL,1);  
-	gtk_window_set_child (GTK_WINDOW (dialog), box);
-	
-	label_speak_sc=gtk_label_new("Speak: Spacebar");  
-	label_home_sc=gtk_label_new("Goto Today: Home Key");
-		
-	gtk_box_append(GTK_BOX(box), label_speak_sc);
-	gtk_box_append(GTK_BOX(box),label_home_sc);
-	
-	gtk_window_present (GTK_WINDOW (dialog));
-	g_signal_connect (dialog, "response", G_CALLBACK (gtk_window_destroy), NULL);
-
-}
-
 //----------------------------------------------------------------
 // Calback information
 //-----------------------------------------------------------------
@@ -2467,37 +2423,59 @@ static void callbk_info(GSimpleAction *action, GVariant *parameter,  gpointer us
 	GtkWidget *dialog; 
 	GtkWidget *box; 
 	gint response; 	
-	//Check buttons
-	GtkWidget *label_record_number;	
+
+
+	GtkWidget *label_record_info;
+	GtkWidget *label_record_number;
 	
+	GtkWidget *label_font_info;
+
 	GtkWidget *label_desktop_font;
-	
 	GtkWidget *label_gnome_text_scale;
 
 	GtkWidget *label_work_dir;
 	GtkWidget *label_working_dir;
+
+	GtkWidget *label_speech_engine;
 	GtkWidget *label_flite;
+
+	GtkWidget *label_keyboard_shortcuts;
+	GtkWidget *label_speak_shortcut;
+	GtkWidget *label_home_shortcut;
 
 	GSettings *settings;
 
+	PangoAttrList *attrs;
+	attrs = pango_attr_list_new ();
+	pango_attr_list_insert (attrs, pango_attr_weight_new (PANGO_WEIGHT_BOLD));
 
-	/* dialog = gtk_dialog_new_with_buttons ("Information", GTK_WINDOW(window),
-	 *  GTK_DIALOG_MODAL|GTK_DIALOG_DESTROY_WITH_PARENT,
-	 *  "Close", GTK_RESPONSE_CLOSE,
-	 *  NULL);     */
-
-	dialog =gtk_window_new(); //gtk_dialog_new_with_buttons to be deprecated gtk4.10
+    //replaced dialog with window as gtk_dialog_new_with_buttons to be deprecated gtk4.10
+	dialog =gtk_window_new();
 
 	gtk_window_set_default_size(GTK_WINDOW(dialog),380,100);
 	gtk_window_set_title (GTK_WINDOW (dialog), "Information");
 	
 	box =gtk_box_new(GTK_ORIENTATION_VERTICAL,1);  
 	gtk_window_set_child (GTK_WINDOW (dialog), box);
+
+	label_keyboard_shortcuts=gtk_label_new("Keyboard Shortcuts");
+	 gtk_label_set_attributes (GTK_LABEL (label_keyboard_shortcuts), attrs);
+
+	label_speak_shortcut=gtk_label_new("Speak: Spacebar");
+	label_home_shortcut=gtk_label_new("Goto Today: Home Key");
+
 	
+	label_record_info=gtk_label_new("Storage");
+	gtk_label_set_attributes (GTK_LABEL (label_record_info), attrs);
+
 	char* record_num_str =" Number of records (max 5000) = ";
 	char* n_str = g_strdup_printf("%d", m_store_size);
 	record_num_str = g_strconcat(record_num_str, n_str,NULL);   
 	label_record_number =gtk_label_new(record_num_str); 
+
+
+	label_font_info=gtk_label_new("Font");
+	gtk_label_set_attributes (GTK_LABEL (label_font_info), attrs);
 
 	settings = g_settings_new ("org.gnome.desktop.interface");
 	gchar* desktop_font_str = g_settings_get_string (settings, "font-name");
@@ -2518,6 +2496,7 @@ static void callbk_info(GSimpleAction *action, GVariant *parameter,  gpointer us
 	char* dir_str ="";
 	dir_str = g_strconcat(dir_str, cur_dir,NULL);
 	label_work_dir=gtk_label_new("Working Directory"); 
+	gtk_label_set_attributes (GTK_LABEL (label_work_dir), attrs);
 	label_working_dir=gtk_label_new(dir_str); 
 	//g_print("current directory = %s\n", cur_dir);
 
@@ -2535,18 +2514,30 @@ static void callbk_info(GSimpleAction *action, GVariant *parameter,  gpointer us
 		flite_str = g_strconcat(flite_str, "Flite not installed. Install Flite for speech.",NULL);
 	}
 
+	label_speech_engine=gtk_label_new("Speech Synthesizer");
+	gtk_label_set_attributes (GTK_LABEL (label_speech_engine), attrs);
 	label_flite=gtk_label_new(flite_str);
 
+	gtk_box_append(GTK_BOX(box),label_keyboard_shortcuts);
+	gtk_box_append(GTK_BOX(box), label_speak_shortcut);
+	gtk_box_append(GTK_BOX(box),label_home_shortcut);
+
+	gtk_box_append(GTK_BOX(box), label_record_info);
 	gtk_box_append(GTK_BOX(box), label_record_number);
+
+	gtk_box_append(GTK_BOX(box),label_font_info);
 	gtk_box_append(GTK_BOX(box),label_desktop_font);
 	gtk_box_append(GTK_BOX(box),label_gnome_text_scale);
+
+	gtk_box_append(GTK_BOX(box),label_speech_engine);
 	gtk_box_append(GTK_BOX(box),label_flite);
+
 	gtk_box_append(GTK_BOX(box),label_work_dir);
 	gtk_box_append(GTK_BOX(box),label_working_dir);
 
-
+	pango_attr_list_unref (attrs);
 	gtk_window_present (GTK_WINDOW (dialog));
-	//g_signal_connect (dialog, "response", G_CALLBACK (gtk_window_destroy), NULL);
+
 
 }
 //----------------------------------------------------------------
@@ -2682,8 +2673,7 @@ static void startup (GtkApplication *app)
 		load_csv_file();
 	}
 	
-	
-	
+
 	 //---------------------------------------------------
   
 		
@@ -2978,7 +2968,7 @@ static void update_calendar(GtkWindow *window) {
   //gtk_grid_set_row_homogeneous (GTK_GRID (grid), TRUE);
   gtk_grid_set_column_homogeneous (GTK_GRID (grid), TRUE);
   
-  //GListStore *store;		
+  //m_store is a GListStore store not a gtkListSore which is being depreciated in gtk4.10
   m_store = g_list_store_new (display_object_get_type ()); //class Gio.ListStore
   
   char* weekday_str="";
@@ -3129,19 +3119,15 @@ static void update_calendar(GtkWindow *window) {
     	
  
   label= gtk_label_new("Mon");
-  //set_widget_font_size(label);
   gtk_grid_attach(GTK_GRID(grid),label,0,1,1,1);
   
   label= gtk_label_new("Tue");
-  //set_widget_font_size(label);
   gtk_grid_attach(GTK_GRID(grid),label,1,1,1,1);
   
   label= gtk_label_new("Wed");
-  //set_widget_font_size(label);
   gtk_grid_attach(GTK_GRID(grid),label,2,1,1,1);
   
   label= gtk_label_new("Thu");
-  //set_widget_font_size(label);
   gtk_grid_attach(GTK_GRID(grid),label,3,1,1,1);
   
   label= gtk_label_new("Fri");
@@ -3149,11 +3135,9 @@ static void update_calendar(GtkWindow *window) {
   gtk_grid_attach(GTK_GRID(grid),label,4,1,1,1);
   
   label= gtk_label_new("Sat");
-  //set_widget_font_size(label);
   gtk_grid_attach(GTK_GRID(grid),label,5,1,1,1);
   
   label= gtk_label_new("Sun");
-  //set_widget_font_size(label);
   gtk_grid_attach(GTK_GRID(grid),label,6,1,1,1);
   
   GDate *today_date; 
@@ -3173,8 +3157,6 @@ static void update_calendar(GtkWindow *window) {
         {
                 
         if (day > 0 && day <= days_in_month) {
-
-		//if(is_public_holiday(day) && m_holidays) {
         
 			if(marked_date[day-1]) {
 
@@ -3263,12 +3245,9 @@ static void update_header (GtkWindow *window)
 	gtk_window_set_titlebar (GTK_WINDOW(window), header);
 	
 	button_new_event = gtk_button_new_with_label ("New Event");
-	//context = gtk_widget_get_style_context (button_new_event);
 	gtk_widget_set_tooltip_text(button_new_event, "New calendar event");
 	g_signal_connect (button_new_event, "clicked", G_CALLBACK (callbk_new_event), window);	
-	//gtk_button_set_has_frame (GTK_BUTTON(button_new_event),TRUE);
-	//g_object_set_data(G_OBJECT(button_new_event), "button-window-key",window);
-	
+
 	button_edit_event = gtk_button_new_with_label ("Edit Event");
 	gtk_widget_set_tooltip_text(button_edit_event, "Edit selected event");
 	g_signal_connect (button_edit_event, "clicked", G_CALLBACK (callbk_edit_event), window);    
@@ -3299,11 +3278,6 @@ static void update_header (GtkWindow *window)
 	
 	section = g_menu_new ();
 	g_menu_append (section, "Information", "app.info"); //show app info
-	g_menu_append_section (menu, NULL, G_MENU_MODEL (section));
-	g_object_unref (section);
-
-	section = g_menu_new ();
-	g_menu_append (section, "Shortcuts", "app.shortcuts"); //show shortcuts
 	g_menu_append_section (menu, NULL, G_MENU_MODEL (section));
 	g_object_unref (section);
 
@@ -3391,13 +3365,7 @@ static void activate (GtkApplication *app, gpointer  user_data)
 	info_action=g_simple_action_new("info",NULL); //app.info
 	g_action_map_add_action(G_ACTION_MAP(app), G_ACTION(info_action)); //make visible	
 	g_signal_connect(info_action, "activate",  G_CALLBACK(callbk_info), window);
-	
-	
-	GSimpleAction *shortcuts_action;	
-	shortcuts_action=g_simple_action_new("shortcuts",NULL); //app.shortcuts
-	g_action_map_add_action(G_ACTION_MAP(app), G_ACTION(shortcuts_action)); //make visible	
-	g_signal_connect(shortcuts_action, "activate",  G_CALLBACK(callbk_shortcuts), window);
-	
+
 	GSimpleAction *quit_action;	
 	quit_action=g_simple_action_new("quit",NULL); //app.quit
 	g_action_map_add_action(G_ACTION_MAP(app), G_ACTION(quit_action)); //make visible	
