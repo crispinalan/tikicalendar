@@ -9,10 +9,10 @@ Tiki Calendar is a personal desktop calendar with some speech capability develop
 
 * built with Gtk4.6
 * event summary, location, start and end time can be entered and edited
-* bespoke month calendar which allows days with events to be marked
 * priority and is yearly can be used
 * csv file storage with memory dynamically allocated for up to 5000 records
 * speech synthesizer
+* removed Gtk4.10 depreciations
 * binary for 64-bit Gtk4 distributions
 
 
@@ -70,7 +70,7 @@ You can show a calendar grid and event end-times in the list view. Talk options 
 
 ## Talking
 
-Tiki Calendar has some some speech capability. It uses Flite which is a free lightweight speech synthesizer. You need to install Flite to enable talking.
+Tiki Calendar now has some some speech capability to become Tiki the talking calendar. It uses Flite which is a free lightweight speech synthesizer. You need to install Flite to enable talking.
 
 ```
 sudo apt install flite
@@ -206,25 +206,27 @@ gtk_color_chooser_get_rgba
 ```
  are being depreciated in Gtk4.10. These were used in the Tiki Calendar v0.1.x series to colour the calendar grid buttons using css.
 
- I am assuming that the Gtk developers want to deprecate these functions so that applications are forced to use the system wide css theme. There is an article [here](https://www.linuxfordevices.com/tutorials/linux/change-gtk4-application-theme) about how to change the Gtk4 application theme in GNOME 40 onwards. There is more information about themes [here](https://www.omgubuntu.co.uk/2017/11/best-gtk-themes-for-ubuntu).  I installed some Gtk4 global themes from [GNOME-Look](https://www.gnome-look.org/browse/) which resulted in inconsistencies in the look and style of Gtk3/Gtk4 applications. For example, below is how Tiki Calendar looked after installing my first Gtk4 theme on a newly installed Debian GNOME desktop.
+ I am assuming that the Gtk developers want to deprecate these functions so that applications are forced to use the system wide css theme. There is an article [here](https://www.linuxfordevices.com/tutorials/linux/change-gtk4-application-theme) about how to change the Gtk4 application theme in GNOME 40 onwards. There is more information about themes [here](https://www.omgubuntu.co.uk/2017/11/best-gtk-themes-for-ubuntu).  I installed some Gtk4 global themes from [GNOME-Look](https://www.gnome-look.org/browse/) which resulted in inconsistencies in the look and style of Gtk3/Gtk4 applications. For example, below is how Tiki Calendar looked after installing my first Gtk4 theme from Gnome Look on a newly installed Debian GNOME desktop.
 
 ![](tiki-gtk4-theme.png)
 
-This type of thing is not caused by the developer of the application but the theme.
+This type of thing is not caused by the developer of the application but by the theme.
 
-Some themes such as TokyoNight are much better than others. Below is a screenshot of a development version of Tiki Calendar themed with ToykoNight. This is testing the gtk4 calendar but I still cannot get "gtk_calendar_mark_day()" to put a visual marker on a particular calendar day with any of the themes I have tried so far.
+Some themes such as are much better than others. Below is a screenshot of a development version of Tiki Calendar themed with the [Flat Remix](https://github.com/daniruiz/flat-remix-gtk) theme (light and dark). Tokyo night is another good theme. I still cannot get Gtk4 Calendar "gtk_calendar_mark_day()" to put a visual marker on an event calendar day with any of the themes I have tried so far.
 
-![](tiki-v024-tokyonight.png)
+![](tiki-v024-flat-remix-theme.png)
 
-The deprecation of the css context functions will mean that theming is taken out of the hands of the developer. I am wondering if the idea is to make developers build libadwaita applications. See note below. As a side note, with Debian Bookworm, to get rid of any installed global themes delete the <ins>.themes</ins> hidden directory and any files in the  <ins>.config/gtk-4.0</ins> directory and restart. This should reset everything.
+![](tiki-v024-flat-remix-theme2.png)
 
-The Gtk ListStore class is going to be depreciated in Gtk4.10. This means functions such as [gtk_list_store_new()](https://docs.gtk.org/gtk4/ctor.ListStore.new.html) used to creates a new list store are labeled "deprecated: 4.10". I have used GListStore from [Gio](https://docs.gtk.org/gio/index.html) in this calendar project creating a new GListStore with [g_list_store_new](https://docs.gtk.org/gio/ctor.ListStore.new.html).
+The deprecation of the css context functions will mean that theming is taken out of the hands of the developer. I am wondering if the idea is to make developers build libadwaita applications. See note below. As a side note, with Debian Bookworm, to get rid of any installed global themes delete the <ins>.themes</ins> hidden directory in the home folder and any files in the  <ins>.config/gtk-4.0</ins> directory and restart. This should reset everything.
+
+The Gtk ListStore class is going to be depreciated in Gtk4.10. This means functions such as [gtk_list_store_new()](https://docs.gtk.org/gtk4/ctor.ListStore.new.html) used to create a new list store are labeled "deprecated: 4.10". I have used GListStore from [Gio](https://docs.gtk.org/gio/index.html) in this calendar project creating a new GListStore with [g_list_store_new](https://docs.gtk.org/gio/ctor.ListStore.new.html).
 
 Removing MessageDialog means that the function [gtk_message_dialog_new](https://docs.gtk.org/gtk4/ctor.MessageDialog.new.html) is being depreciated which was widely used in the Tiki Calendar v0.1.x series. I am in the process of removing all of these.
 
 The [gtk_dialog_new_with_buttons()](https://docs.gtk.org/gtk4/ctor.Dialog.new_with_buttons.html) function is being depreciated and so the only other way I can see to create a dialog is to use [gtk_window_new](https://docs.gtk.org/gtk4/ctor.Window.new.html). All of the dialogs are now being changed to use gtk_window_new in the Tiki Calendar 0.2.x series.
 
-I have have been going through the calendar code line-by-line removing  class functions that are on the Gtk4.10 depreciation hit list. This has  has meant that some features have had to be removed such as colour marking days with events on the calendar as this used css context functions being depreciated (see above).
+I have have been going through the calendar code line-by-line removing  class functions that are on the Gtk4.10 depreciation hit list. This has  has meant that some features have had to be removed such as colour marking days with events on the calendar as this used css context functions being depreciated (see above). The button grid calendar has been replaced with the Gtk4 calendar for now while cleaning the project of Gtk4.10 depreciations.
 
 GTK developers are planning the [Gtk5](https://www.phoronix.com/news/GTK5-Likely-After-GTK-4.12) toolkit discussing making it a Wayland only [release](https://www.phoronix.com/news/GTK5-Might-Drop-X11).
 
@@ -256,6 +258,8 @@ has been depreciated. This has been less of an issue as callback functions have 
 I could not place a visual marker on a particular GtkCalendar day using the "gtk_calendar_mark_day()" function. The [GtkInspector](https://wiki.gnome.org/action/show/Projects/GTK/Inspector?action=show&redirect=Projects%2FGTK%2B%2FInspector) debugging tool does not reveal any obvious CSS style theme option that should to be used to do this. To do this I compiled an example calendar app and pressed Ctrl+Shift+I. At the time I was using Fedora 35 GNOME. With no success, I have ended up writing a bespoke month calendar using the Gtk4 grid layout [manager](https://docs.gtk.org/gtk4/class.Grid.html) which arranges child widgets in rows and columns. I used the layout manager arrange 31 buttons in a grid to create a month calendar. Again a significant effort has had to be invested in this aspect of the porting. I thought that I would be able to use css styling to colour mark calendar day buttons having an event but the css context functions that I used are now being depreciated in Gtk4.10 (see above).
 
 The function "gtk_spin_button_set_text()" has gone in Gtk4. The documented approach for showing spin button [leading zeros](https://people.gnome.org/~ebassi/docs/_build/Gtk/4.0/signal.SpinButton.output.html) I could not get to work. Consequently, I have had to replace the spin boxes in the new and edit event dialogs. The spin boxes for the start and end times now accept floating point values which are now stored in the database as floating point values. I have also removed the priority combobox as comboboxes are on the Gtk4 depreciation hit list (see list widget discussion above) and replaced it with a single high priority check button. It now turns out that dialogs are being depreciated in Gtk4.10. See the Gtk4 depreciations discussion above.
+
+The Gtk3 container API has been dropped in Gtk4. In Gtk4 widgets can have children.
 
 Other depreciations include "gtk_application_set_app_menu()" as discussed [here](https://wiki.gnome.org/HowDoI/ApplicationMenu). The function "gtk_button_set_image()" has gone. In the context of menu development it can be replaced with "gtk_menu_button_set_icon_name()".
 
