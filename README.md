@@ -112,7 +112,7 @@ With the GNOME desktop use the GNOME "Tweak Tool" to add Tiki Calendar to your s
 
 The css context style and provider classes which were used to colour days with events on the previous button grid calendar are being depreciated in Gtk4.10 (see notes and comments below). Consequently, I have replaced bespoke button grid calendar with the [gk4 calendar widget](https://docs.gtk.org/gtk4/class.Calendar.html) which is styled using the Linux (GNOME) system css theme. This calendar uses gtk_calendar_mark_day() to place a visual marker on a particular day and gtk_calendar_unmark_day() to remove the marker. However, visual markers are not visible on the GNOME desktops (Debian, Fedora)  that I have used for testing Tiki Calendar. This appears to be due to a gtk [css theme issue](https://gitlab.gnome.org/GNOME/gtk/-/tree/main/gtk/theme/Default). If this is the case then there is very little a Gtk4 developer can do about this as applications now rely on the Linux (GNOME) system css theme. The gtk_calendar_mark_day() and gtk_calendar_unmark_day() did work with the Gtk3 version of Tiki Calendar.
 
-I have attempted to mitigate this problem by introducting a "Speak Month" feature which reads out month dates with events. To use this either press the "M" key (M for month markers) or use the menu item called "Speak Month".
+I have attempted to mitigate this problem by introducting a "Speak Month" feature which reads out month days with events. To use this either press the "M" key (M for month markers) or use the menu item called "Speak Month".
 
 
 * The events.css storage file becomes corrupted
@@ -195,7 +195,7 @@ As a side note, with Debian Bookworm, to get rid of any installed application th
 
 This is a hobby project under development to learn Gtk programming.
 
-The first iteration of the Tiki Calendar project used Gtk3 but then migrated to the Gtk4 toolkit. The Gtk3 project was forked and so can be found elsewhere on github. This Gtk4 version of Tiki Calendar uses a csv file to store events (rather than sqlite) with memory dynamically allocated for up to 5000 records. The events storage file is called "eventsdb.csv" and should be located in the current working directory.
+The first iteration of the Tiki Calendar project used Gtk3 but then migrated to the Gtk4 toolkit. The Gtk3 project was forked and so can be found elsewhere on github. This Gtk4 version of Tiki Calendar uses a csv file to store events (rather than sqlite). The events storage file is called "events.csv" and should be located in the current working directory.
 
 I developed this calendar application to learn Gtk as at the time I was concerned that Qt may become closed source when the Qt Company (now the Qt Group) announced that the Qt LTS versions and the offline installer were to become commercial-only. See [Qt licensing changes](https://www.qt.io/blog/qt-offering-changes-2020). I was investigating the feasibility of porting my Qt5 [Talk Calendar project](https://github.com/crispinalan/talkcalendar) to Gtk. Qt is [dual-licensed](https://www.qt.io/licensing/) under commercial and open source licenses. The Qt Group have [announced](https://www.qt.io/blog/the-conversion-program-is-ending) that the regular support of  Qt 5.15, the last release of the Qt 5 series, ends on the 26th of May 2023. KDE is switching its master branch for the Plasma desktop repositories to be [Qt6-only](https://mail.kde.org/pipermail/kde-devel/2023-February/001699.html). Consequently, I am assuming that that the Qt Group will be giving away the [Qt6](https://www.qt.io/product/qt6) toolkit for free and any concerns about Qt6 becoming commercial only are unfounded.
 
@@ -304,7 +304,7 @@ This is not a libadwaita project but a Gtk4 only project. The project focus is o
 
 ## License
 
-The Gtk4.0 GUI toolkit is licensed using LGPLv2.1.  Consequently, Tiki Calendar has been licensed using the GNU  General Public License version 2.
+The Gtk4.0 GUI toolkit is licensed using LGPLv2.1.  Consequently, Tiki Calendar has been licensed using the GNU General Public License version 2.1 or later.
 
 
 ## Acknowledgements
