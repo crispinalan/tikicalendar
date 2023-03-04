@@ -2922,7 +2922,7 @@ static void callbk_calendar_next_month(GtkCalendar *calendar, gpointer user_data
 	display_events(m_start_year,m_start_month,m_start_day);
 	set_event_marks_on_calendar(GTK_CALENDAR(calendar));
 
-	if(m_holidays) mark_holidays_on_calendar(GTK_CALENDAR(calendar), m_start_month, m_start_year);
+	//if(m_holidays) mark_holidays_on_calendar(GTK_CALENDAR(calendar), m_start_month, m_start_year);
 
 }
 
@@ -2935,7 +2935,7 @@ static void callbk_calendar_prev_month(GtkCalendar *calendar, gpointer user_data
 	display_events(m_start_year,m_start_month,m_start_day);
 	set_event_marks_on_calendar(GTK_CALENDAR(calendar));
 
-	if(m_holidays) mark_holidays_on_calendar(GTK_CALENDAR(calendar), m_start_month, m_start_year);
+	//if(m_holidays) mark_holidays_on_calendar(GTK_CALENDAR(calendar), m_start_month, m_start_year);
 
 
 }
@@ -2948,7 +2948,7 @@ static void callbk_calendar_next_year(GtkCalendar *calendar, gpointer user_data)
 	display_events(m_start_year,m_start_month,m_start_day);
 	set_event_marks_on_calendar(GTK_CALENDAR(calendar));
 
-	if(m_holidays) mark_holidays_on_calendar(GTK_CALENDAR(calendar), m_start_month, m_start_year);
+	//if(m_holidays) mark_holidays_on_calendar(GTK_CALENDAR(calendar), m_start_month, m_start_year);
 
 }
 
@@ -2960,7 +2960,7 @@ static void callbk_calendar_prev_year(GtkCalendar *calendar, gpointer user_data)
 	display_events(m_start_year,m_start_month,m_start_day);
 	set_event_marks_on_calendar(GTK_CALENDAR(calendar));
 
-	if(m_holidays) mark_holidays_on_calendar(GTK_CALENDAR(calendar), m_start_month, m_start_year);
+	//if(m_holidays) mark_holidays_on_calendar(GTK_CALENDAR(calendar), m_start_month, m_start_year);
 
 }
 

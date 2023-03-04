@@ -72,9 +72,17 @@ Talk options can also be changed.
 
 Tiki Calendar now has some some speech capability. Tiki (the talking) Calendar uses Flite which is a free lightweight speech synthesizer. You need to install Flite to enable talking.
 
+To do this with Debian Bookworm become superuser or with Ubuntu 22.04 use sudo and then use the command.
+
 ```
-sudo apt install flite
+apt install flite
 ```
+With Fedora as superuser use the following command.
+
+```
+dnf install flite
+```
+
 * Enable talking in the Preferences dialog
 * Enable talk details to be spoken
 * Click on a calendar date with events
