@@ -304,8 +304,7 @@ This is not a libadwaita project but a Gtk4 only project. The project focus is o
 
 ## License
 
-The Gtk4.0 GUI toolkit is licensed using LGPLv2.1.  Consequently, Tiki Calendar has been licensed using the GNU General Public License version 2.1 or later.
-
+The Gtk4.0 GUI toolkit is licensed using LGPLv2.1.  Consequently, Tiki Calendar has been licensed using the GNU General Public License.
 
 ## Acknowledgements
 

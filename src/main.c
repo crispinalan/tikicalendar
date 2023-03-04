@@ -1,27 +1,19 @@
-/*
- * main.c
- * 
-/*
- * main.c
- *
- * Copyright 2023 Alan Crispin <crispinalan@gmail.com>
- *
- * This program is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; version 2+ of the License.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
- * MA 02110-1301, USA.
- *
- *
- */
+/***************************************************************************
+ *   Author Alan Crispin                                                   *
+ *   crispinalan@gmail.com                                                 *
+ *                                                                         *
+ *   This program is free software; you can redistribute it and/or modify  *
+ *   it under the terms of the GNU General Public License as published by  *
+ *   the Free Software Foundation.                                         *
+ *                                                                         *
+ *   This program is distributed in the hope that it will be useful,       *
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
+ *   GNU General Public License for more details.                          *
+ *                                                                         *
+ *   You should have received a copy of the GNU General Public License     *
+ *   along with this program.  If not, see <http://www.gnu.org/licenses/>. *
+ ***************************************************************************/
 
 /*
  * Use MAKEFILE to compile
@@ -1756,7 +1748,7 @@ static void callbk_add(GtkButton *button, gpointer  user_data){
 	update_date(GTK_CALENDAR(calendar),label_date);
 	display_events(m_start_year,m_start_month,m_start_day);
 
-
+	set_event_marks_on_calendar(GTK_CALENDAR(calendar));
 	gtk_window_destroy(GTK_WINDOW(dialog));
 	//gtk_window_close(GTK_WINDOW(window));
 
@@ -2005,6 +1997,7 @@ static void callbk_update_event(GtkButton *button, gpointer  user_data){
 	m_id_selection=-1;
 	update_date(GTK_CALENDAR(calendar),label_date);
 	display_events(m_start_year,m_start_month,m_start_day);
+	set_event_marks_on_calendar(GTK_CALENDAR(calendar));
 	gtk_window_destroy(GTK_WINDOW(dialog));
 }
 
@@ -2302,6 +2295,7 @@ static void callbk_delete_selected(GtkButton *button, gpointer  user_data){
 
 	m_id_selection=-1;
 	update_date(GTK_CALENDAR(calendar),label_date);
+	set_event_marks_on_calendar(GTK_CALENDAR(calendar));
 	display_events(m_start_year,m_start_month,m_start_day);
 
 }
@@ -2724,6 +2718,7 @@ GtkWindow *window = GTK_WINDOW (gtk_widget_get_ancestor (GTK_WIDGET (user_data),
 
 	gtk_label_set_text(GTK_LABEL(label_date), date_str);
 	gtk_calendar_select_day (GTK_CALENDAR(calendar), date_time);
+	set_event_marks_on_calendar(GTK_CALENDAR(calendar));
 
 	display_events(m_start_year,m_start_month,m_start_day);
 
