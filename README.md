@@ -1,6 +1,6 @@
 # Tiki Calendar
 
-Tiki Calendar is a personal desktop calendar with some speech capability developed using C and [Gtk4](https://docs.gtk.org/gtk4/) for Linux desktops like GNOME.
+Tiki Calendar is a personal desktop calendar with some speech capability developed using C and [Gtk4](https://docs.gtk.org/gtk4/) for Linux desktops such as GNOME.
 
 
 ![](tikicalendar.png)
@@ -8,10 +8,10 @@ Tiki Calendar is a personal desktop calendar with some speech capability develop
 ## Core Features
 
 * built with Gtk4.6
-* month calendar
+* gtk4 calendar
 * event summary, location, start and end time can be entered and edited
 * priority and is-yearly can be used
-* csv file storage with memory dynamically allocated for up to 5000 records
+* csv file storage
 * speech synthesizer
 * binary for 64-bit Gtk4 distributions
 
@@ -32,7 +32,7 @@ or double click on the tikicalendar file. Make sure it has executable permission
 
 Use a menu editor such as [MenuLibre](https://github.com/bluesabre/menulibre) to create a launcher for Tiki Calendar.
 
-The database called "eventsdb.csv" is located in the working directory. With Tiki Calendar you can use the information menu item
+The database called "events.csv" is located in the working directory. With Tiki Calendar you can use the information menu item
 information to show the current working directory where the events database should be located.
 
 ## Calendar Usage
@@ -45,11 +45,9 @@ information to show the current working directory where the events database shou
 * Enter the location
 * Enter start and end times
 * Events are sorted by start time when displayed
-* An asterisk marker is placed on a day in the calendar which has an event
-* The today date is marked with square brackets []
 * Navigate through the year using the calendar to add events
 
-![](tikicalendar-new-event.png)
+![](tiki-v026-new-event.png)
 
 
 ### Editing Existing Event
@@ -57,15 +55,17 @@ information to show the current working directory where the events database shou
 * Select the event in the list view and click the Edit button on the headerbar to edit
 * Change details as appropriate
 
-![](tikicalendar-edit-event.png)
+![](tiki-v026-edit-event.png)
 
 ### Preferences
 
 * Use the Preferences dialog in the hamburger menu to change  options
 
-![](tikicalendar-preferences.png)
+![](tiki-v026-preferences.png)
 
-You can use 12 hour format and event end-times can be shown in the list view. If public holidays is selected then "*" marks are added to the calendar on public holiday days and the date label shows the public holiday (UK only). Talk options can also be changed.
+You can use 12 hour format and event end-times can be shown in the list view. If public holidays is selected then the date label shows the public holiday (UK only) which is also spoken.
+
+Talk options can also be changed.
 
 
 ## Talking
@@ -86,17 +86,18 @@ The use of Flite replaces the previous date/tag reader code which was based on c
 
 ### Information
 
-* Use the Information dialog to show the current working directory (in which the eventsdb.csv file should be stored) and other system information such as the system font being used.
+* Use the Information dialog to show the current working directory (in which the events.csv file should be stored) and other system information such as the system font being used.
 
-![](tikicalendar-information.png)
+![](tiki-v026-information.png)
 
 * Use the About dialog to display current version.
 
 
 ### Keyboard Shortcuts
 ```
-Speak		Spacebar
-Today		Home Key
+Speak           Spacebar
+Speak Marks     M
+Today           Home Key
 ```
 
 ## Startup Applications
@@ -105,6 +106,22 @@ Add Tiki Calendar to your start-up programs to read out the date and any event d
 
 With the GNOME desktop use the GNOME "Tweak Tool" to add Tiki Calendar to your startup applications if required.
 
+## Known Issues
+
+* Calendar visual markers
+
+The css context style and provider classes which were used to colour days with events on the previous button grid calendar are being depreciated in Gtk4.10 (see notes and comments below). Consequently, I have replaced bespoke button grid calendar with the [gk4 calendar widget](https://docs.gtk.org/gtk4/class.Calendar.html) which is styled using the Linux (GNOME) system css theme. This calendar uses gtk_calendar_mark_day() to place a visual marker on a particular day and gtk_calendar_unmark_day() to remove the marker. However, visual markers are not visible on the GNOME desktops (Debian, Fedora)  that I have used for testing Tiki Calendar. This appears to be due to a gtk [css theme issue](https://gitlab.gnome.org/GNOME/gtk/-/tree/main/gtk/theme/Default). If this is the case then there is very little a Gtk4 developer can do about this as applications now rely on the Linux (GNOME) system css theme. The gtk_calendar_mark_day() and gtk_calendar_unmark_day() did work with the Gtk3 version of Tiki Calendar.
+
+I have attempted to mitigate this problem by introducting a "Speak Month" feature which reads out month dates with events. To use this either press the "M" key (M for month markers) or use the menu item called "Speak Month".
+
+
+* The events.css storage file becomes corrupted
+
+If you open the events.css events storage file with another application (or some text editors) hidden characters or new line spaces may be added. If this happens then it will cause a segmentation fault when Tiki Calendar attempts to re-open it. To solve this problem either rename the corrupted events.css file and restart Tiki Calendar which will generated a new events.css file or remove hidden/unwanted characters from the original events.css file.
+
+* Gtk4.10 depreciations
+
+I believe I have found and removed most of the functions that are to be depreciated in Gtk4.10 (see note below) which has resulted in a large number of changes to the code base. As a consequence some features have been temporarily removed.
 
 ## Build From Source
 
@@ -154,36 +171,25 @@ make
 ```
 ## Themes
 
-The Tiki Calendar version 0.2 series is now themed using the Gtk application theme. There is an article [here](https://www.linuxfordevices.com/tutorials/linux/change-gtk4-application-theme) about how to change the Gtk4 application theme in GNOME 40 onwards. There is more information about themes [here](https://www.omgubuntu.co.uk/2017/11/best-gtk-themes-for-ubuntu). Some examples of how Tiki Calendar looks with different application themes are shown below.
+The Tiki Calendar version 0.2 series is now themed using the Gtk application theme.  Some examples of how Tiki Calendar looks with  Debian Bookworm themes are shown below.
 
 ### Adwaita High Contrast
 
-![](tiki-v025-debian-adwaita-high-contrast.png)
+![](tiki-v026-debian-high-contrast.png)
 
 ### Adwaita Dark
 
-![](tiki-v025-debian-adwaita-dark.png)
+![](tiki-v026-adwaita-dark.png)
 
-Adwaita dark with the calendar grid option selected is shown below.
 
-![](tiki-v025-debian-adwaita-dark-grid.png)
+### User Themes
 
-### Flat remix
+There is an article [here](https://www.linuxfordevices.com/tutorials/linux/change-gtk4-application-theme) about how to change the Gtk4 application theme in GNOME 40 onwards. There is more information about themes [here](https://www.omgubuntu.co.uk/2017/11/best-gtk-themes-for-ubuntu). Gtk4 application themes can be download from [GNOME-Look](https://www.gnome-look.org/browse/).
 
-The [Flat Remix](https://github.com/daniruiz/flat-remix-gtk) dark green solid theme is shown below..
-
-![](tiki-v025-debian-flat-remix.png)
-
-### Other
-
-Other Gtk4 application themes can be found from [GNOME-Look](https://www.gnome-look.org/browse/). Tokyo night is another good theme as shown below.
-
-![](tiki-v025-debian-tokyo-night.png)
-
-![](tiki-v025-edit-event-tokyo-night.png)
-
+The [Flat Remix](https://github.com/daniruiz/flat-remix-gtk) and Tokyo night are popular themes.
 
 As a side note, with Debian Bookworm, to get rid of any installed application themes delete the <ins>.themes</ins> hidden directory in the home folder and any files in the  <ins>.config/gtk-4.0</ins> directory and restart. This should reset everything.
+
 
 ## History
 
@@ -191,16 +197,16 @@ This is a hobby project under development to learn Gtk programming.
 
 The first iteration of the Tiki Calendar project used Gtk3 but then migrated to the Gtk4 toolkit. The Gtk3 project was forked and so can be found elsewhere on github. This Gtk4 version of Tiki Calendar uses a csv file to store events (rather than sqlite) with memory dynamically allocated for up to 5000 records. The events storage file is called "eventsdb.csv" and should be located in the current working directory.
 
-I developed this calendar application to learn Gtk as at the time I was concerned that Qt may become closed source when the Qt Company (now the Qt Group) announced that the Qt LTS versions and the offline installer were to become commercial-only. See [Qt licensing changes](https://www.qt.io/blog/qt-offering-changes-2020). I was investigating the feasibility of porting my Qt5 [Talk Calendar project](https://github.com/crispinalan/talkcalendar) to Gtk. Qt is [dual-licensed](https://www.qt.io/licensing/) under commercial and open source licenses. The Qt Group have [announced](https://www.qt.io/blog/the-conversion-program-is-ending) that the regular support of  Qt 5.15, the last release of the Qt 5 series, ends on the 26th of May 2023. It is not clear to me if the Qt Group will release [Qt6](https://www.qt.io/product/qt6) LTS versions as open source although minor versions are available in Linux repositories.
+I developed this calendar application to learn Gtk as at the time I was concerned that Qt may become closed source when the Qt Company (now the Qt Group) announced that the Qt LTS versions and the offline installer were to become commercial-only. See [Qt licensing changes](https://www.qt.io/blog/qt-offering-changes-2020). I was investigating the feasibility of porting my Qt5 [Talk Calendar project](https://github.com/crispinalan/talkcalendar) to Gtk. Qt is [dual-licensed](https://www.qt.io/licensing/) under commercial and open source licenses. The Qt Group have [announced](https://www.qt.io/blog/the-conversion-program-is-ending) that the regular support of  Qt 5.15, the last release of the Qt 5 series, ends on the 26th of May 2023. KDE is switching its master branch for the Plasma desktop repositories to be [Qt6-only](https://mail.kde.org/pipermail/kde-devel/2023-February/001699.html). Consequently, I am assuming that that the Qt Group will be giving away the [Qt6](https://www.qt.io/product/qt6) toolkit for free and any concerns about Qt6 becoming commercial only are unfounded.
 
-To avoid any confusion with my Qt5 calendar project I have called this Gtk4 version Tiki Calendar. Tiki is an acronym for Tightly Integrated Knowledge Infrastructure. The Tiki Calendar v0.2x series introduced speech capability using the Flite speech synthesizer. Gtk4 uses one license the [GNU Lesser General Public License version 2.1](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html) and so is not dual licensed.
+To avoid any confusion with my Qt5 calendar project I have called this Gtk4 version Tiki Calendar. Tiki is an acronym for Tightly Integrated Knowledge Infrastructure. The Tiki Calendar v0.2x series introduced speech capability using the Flite speech synthesizer. Gtk4 uses one license the [GNU Lesser General Public License version 2.1](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html) and so is not dual licensed. I have used Flite rather than espeak because espeak is licensed under GPL v3.0 whereas Gtk4 is licensed under LGPL v2.1 and I am still not sure if these are compatible.
 
-[Flutter](https://flutter.dev/) is another open-source cross-platform graphical user interface software development kit which has been created by Google. It is currently being used by Canonical to build a new [Ubuntu desktop installer](https://9to5linux.com/ubuntu-will-get-a-brand-new-desktop-installer-using-flutter) to replace Ubiquity. The [Pangolin](https://github.com/dahliaOS/pangolin_desktop/) desktop user interface is written in Flutter. Flutter includes [two components](https://docs.flutter.dev/resources/faq), an engine and the Dart framework. The engine uses multiple software components with many dependencies. Although the Flutter framework requires only one [license](https://github.com/flutter/flutter/blob/master/LICENSE) the Dart packages have their own license requirements. Consequently, I decided not use the Flutter toolkit.
+[Flutter](https://flutter.dev/) is another open-source cross-platform graphical user interface software development kit which has been created by Google. It is currently being used by Canonical to build a new [Ubuntu desktop installer](https://9to5linux.com/ubuntu-will-get-a-brand-new-desktop-installer-using-flutter) to replace Ubiquity. The [Pangolin](https://github.com/dahliaOS/pangolin_desktop/) desktop user interface is written in Flutter. Flutter includes [two components](https://docs.flutter.dev/resources/faq), an engine and the Dart framework. The engine uses multiple software components with many dependencies. Although the Flutter framework requires only one [license](https://github.com/flutter/flutter/blob/master/LICENSE) the Dart packages have their own license requirements. Consequently, I decided not to use the Flutter toolkit.
 
 
 ## Gtk4 Depreciations
 
-I have been using GTk4.6.6 for developing Tiki Calendar. To determine the version of Gtk4 running on a Linux system use the following terminal command.
+I have been using Gtk4.6.6 for developing Tiki Calendar. To determine the version of Gtk4 running on a Linux system use the following terminal command.
 
 ```
 dpkg -l | grep libgtk*
@@ -235,7 +241,7 @@ gtk_widget_get_style_context
 gtk_style_context_add_provider
 gtk_color_chooser_get_rgba
 ```
- are being depreciated in Gtk4.10. These were used in the Tiki Calendar v0.1.x series to colour the calendar dates with events using css. These are now marked with an "*". Although the style context provider functions above are being depreciated the "gtk_widget_add_css_class" is not. I am assuming that the Gtk developers want to deprecate these functions so that applications are forced to use the system wide css theme.
+ are being depreciated in Gtk4.10. These were used in the Tiki Calendar v0.1.x series to colour the calendar dates with events using css. Although the style context provider functions above are being depreciated the "gtk_widget_add_css_class" is not. I am assuming that the Gtk developers want to deprecate these functions so that applications are forced to use the system wide css theme.
 
 The Gtk ListStore class is going to be depreciated in Gtk4.10. This means functions such as [gtk_list_store_new()](https://docs.gtk.org/gtk4/ctor.ListStore.new.html) used to create a new list store are labeled "deprecated: 4.10". I have used GListStore from [Gio](https://docs.gtk.org/gio/index.html) in this calendar project creating a new GListStore with [g_list_store_new](https://docs.gtk.org/gio/ctor.ListStore.new.html).
 
