@@ -249,7 +249,7 @@ gtk_widget_get_style_context
 gtk_style_context_add_provider
 gtk_color_chooser_get_rgba
 ```
- are being depreciated in Gtk4.10. These were used in the Tiki Calendar v0.1.x series to colour the calendar dates with events using css. Although the style context provider functions above are being depreciated the "gtk_widget_add_css_class" is not. I am assuming that the Gtk developers want to deprecate these functions so that applications are forced to use the system wide css theme.
+ are being depreciated in Gtk4.10. These were used in the Tiki Calendar v0.1.x series to colour the calendar dates with events using css. [Style contexts will be removed in Gtk5](https://docs.gtk.org/gtk4/method.Widget.get_style_context.html). I am assuming that the Gtk developers want to deprecate these functions so that applications are forced to use the system wide (compiled) css theme. I need to learn more about what is going on here.
 
 The Gtk ListStore class is going to be depreciated in Gtk4.10. This means functions such as [gtk_list_store_new()](https://docs.gtk.org/gtk4/ctor.ListStore.new.html) used to create a new list store are labeled "deprecated: 4.10". I have used GListStore from [Gio](https://docs.gtk.org/gio/index.html) in this calendar project creating a new GListStore with [g_list_store_new](https://docs.gtk.org/gio/ctor.ListStore.new.html).
 
