@@ -157,6 +157,7 @@ apt install build-essential
 apt install libgtk-4-dev
 apt install gtk-4-examples
 apt install libasound2-dev
+apt install flite
 ```
 The packages:
 ```
