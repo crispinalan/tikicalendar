@@ -250,7 +250,7 @@ gtk_widget_get_style_context
 gtk_style_context_add_provider
 gtk_color_chooser_get_rgba
 ```
- are being depreciated in Gtk4.10. These were used in the Tiki Calendar v0.1.x series to colour the calendar dates with events using css. [Style contexts will be removed in Gtk5](https://docs.gtk.org/gtk4/method.Widget.get_style_context.html). I am assuming that the Gtk developers want to deprecate these functions so that applications are forced to use the system wide (compiled) css theme. I need to learn more about what is going on here.
+ are being depreciated in Gtk4.10. These were used in the Tiki Calendar v0.1.x series to colour the calendar dates with events using css. [Style contexts will be removed in Gtk5](https://docs.gtk.org/gtk4/method.Widget.get_style_context.html). I am assuming that the Gtk developers want to deprecate these functions so that applications are forced to use the system wide (compiled) css theme. I need to learn more about these [changes](https://docs.gtk.org/gtk4/migrating-3to4.html) and writing code using the [gtk_widget_add_css_class](https://docs.gtk.org/gtk4/method.Widget.add_css_class.html).
 
 The Gtk ListStore class is going to be depreciated in Gtk4.10. This means functions such as [gtk_list_store_new()](https://docs.gtk.org/gtk4/ctor.ListStore.new.html) used to create a new list store are labeled "deprecated: 4.10". I have used GListStore from [Gio](https://docs.gtk.org/gio/index.html) in this calendar project creating a new GListStore with [g_list_store_new](https://docs.gtk.org/gio/ctor.ListStore.new.html).
 
@@ -260,7 +260,7 @@ The [gtk_dialog_new_with_buttons()](https://docs.gtk.org/gtk4/ctor.Dialog.new_wi
 
 I have have been going through the calendar code line-by-line removing  class functions that are on the Gtk4.10 depreciation hit list. This has  has meant that some features have had to be temporarily removed.
 
-GTK developers are planning the [Gtk5](https://www.phoronix.com/news/GTK5-Likely-After-GTK-4.12) toolkit discussing making it a Wayland only [release](https://www.phoronix.com/news/GTK5-Might-Drop-X11).
+GTK developers are planning the [Gtk5](https://www.phoronix.com/news/GTK5-Likely-After-GTK-4.12) toolkit discussing making it a Wayland only [release](https://www.phoronix.com/news/GTK5-Might-Drop-X11).Gtk 4.10 has been released and can be downloaded [here](https://download.gnome.org/sources/gtk/).
 
 
 ## My Gtk3 to Gtk4 Migration Notes
