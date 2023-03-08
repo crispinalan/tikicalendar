@@ -118,9 +118,7 @@ With the GNOME desktop use the GNOME "Tweak Tool" to add Tiki Calendar to your s
 
 * Calendar visual markers
 
-The css context style and provider classes which were used to colour days with events on the previous button grid calendar are being depreciated in Gtk4.10 (see notes and comments below). Consequently, I have replaced bespoke button grid calendar with the [gk4 calendar widget](https://docs.gtk.org/gtk4/class.Calendar.html) which is styled using the Linux (GNOME) system css theme. This calendar uses gtk_calendar_mark_day() to place a visual marker on a particular day and gtk_calendar_unmark_day() to remove the marker. However, visual markers are not visible on the GNOME desktops (Debian, Fedora)  that I have used for testing Tiki Calendar. This appears to be due to a gtk [css theme issue](https://gitlab.gnome.org/GNOME/gtk/-/tree/main/gtk/theme/Default). If this is the case then there is very little a Gtk4 developer can do about this as applications now rely on the Linux (GNOME) system css theme. The gtk_calendar_mark_day() and gtk_calendar_unmark_day() did work with the Gtk3 version of Tiki Calendar.
-
-I have attempted to mitigate this problem by introducting a "Speak Month" feature which reads out month days with events. To use this either press the "M" key (M for month markers) or use the menu item called "Speak Month".
+The css context style and provider classes which were used to colour days with events on the previous button grid calendar are being depreciated in Gtk4.10 (see notes and comments below). Consequently, I have replaced bespoke button grid calendar with the [gk4 calendar widget](https://docs.gtk.org/gtk4/class.Calendar.html) which is styled using the Linux (GNOME) system css theme. This calendar uses gtk_calendar_mark_day() to place a visual marker on a particular day and gtk_calendar_unmark_day() to remove the marker. However, visual markers are not visible on the GNOME desktops (Debian, Fedora)  that I have used for testing Tiki Calendar. I have attempted to mitigate this problem by introducting a "Speak Month" feature which reads out month days with events. To use this either press the "M" key (M for month markers) or use the menu item called "Speak Month".
 
 
 * The events.css storage file becomes corrupted
@@ -212,6 +210,8 @@ To avoid any confusion with my Qt5 calendar project I have called this Gtk4 vers
 
 [Flutter](https://flutter.dev/) is another open-source cross-platform graphical user interface software development kit which has been created by Google. It is currently being used by Canonical to build a new [Ubuntu desktop installer](https://9to5linux.com/ubuntu-will-get-a-brand-new-desktop-installer-using-flutter) to replace Ubiquity. The [Pangolin](https://github.com/dahliaOS/pangolin_desktop/) desktop user interface is written in Flutter. Flutter includes [two components](https://docs.flutter.dev/resources/faq), an engine and the Dart framework. The engine uses multiple software components with many dependencies. Although the Flutter framework requires only one [license](https://github.com/flutter/flutter/blob/master/LICENSE) the Dart packages have their own license requirements. Consequently, I decided not to use the Flutter toolkit.
 
+One other option is [Electron](https://github.com/electron/electron) which has an [MIT license](https://github.com/electron/electron/blob/main/LICENSE). The Electron framework lets you write cross-platform desktop applications using JavaScript, HTML and CSS. It is based on [Node.js](https://nodejs.org/en/) and [Chromium](https://www.chromium.org/chromium-projects/). Application such as [Visual Studio Code](https://code.visualstudio.com/) are built with Electron. It is basically a framwwork which allows developers to create a desktop application using web technologies which is  wrapped inside a Chromium browser and distributed as a native application. Electron integrates with the underlying operating system. With Linux it uses Gtk under the bonnet.
+
 
 ## Gtk4 Depreciations
 
@@ -221,7 +221,7 @@ I have been using Gtk4.6.6 for developing Tiki Calendar. To determine the versio
 dpkg -l | grep libgtk*
 ```
 
-Gtk have announced on their [Gtk4 api website](https://docs.gtk.org/gtk4/) that the following classes
+Gtk 4.10 has been released and can be downloaded [here](https://download.gnome.org/sources/gtk/). Gtk have announced on their [Gtk4 api website](https://docs.gtk.org/gtk4/) that the following classes
 
 ```
 AppChooserButton, AppChooserDialog, AppChooserWidget,
@@ -239,7 +239,7 @@ TreeModelFilter,TreeModelSort, TreeSelection, TreeStore, TreeView, TreeViewColum
 VolumeButton
 ```
 
-are being deprecated in Gtk4 version 4.10 onwards.
+are being deprecated in Gtk4.10 onwards.
 
 It was the intention of Gtk developers to eventually replace GtkTreeView and GtkComboBox with [list widgets](https://blog.gtk.org/2020/06/08/more-on-lists-in-gtk-4/) and so I did not use these classes in the development of this calendar.
 
@@ -250,7 +250,7 @@ gtk_widget_get_style_context
 gtk_style_context_add_provider
 gtk_color_chooser_get_rgba
 ```
- are being depreciated in Gtk4.10. These were used in the Tiki Calendar v0.1.x series to colour the calendar dates with events using css. [Style contexts will be removed in Gtk5](https://docs.gtk.org/gtk4/method.Widget.get_style_context.html). I am assuming that the Gtk developers want to deprecate these functions so that applications are forced to use the system wide (compiled) css theme. I need to learn more about these [changes](https://docs.gtk.org/gtk4/migrating-3to4.html) and writing code using the [gtk_widget_add_css_class](https://docs.gtk.org/gtk4/method.Widget.add_css_class.html).
+ are being depreciated in Gtk4.10. These were used in the Tiki Calendar v0.1.x series to colour the calendar dates with events using css. [Style contexts will be removed in Gtk5](https://docs.gtk.org/gtk4/method.Widget.get_style_context.html). I need to find out more about these [changes](https://docs.gtk.org/gtk4/migrating-3to4.html) and write code using either the [gtk_widget_add_css_class](https://docs.gtk.org/gtk4/method.Widget.add_css_class.html) or Pango.
 
 The Gtk ListStore class is going to be depreciated in Gtk4.10. This means functions such as [gtk_list_store_new()](https://docs.gtk.org/gtk4/ctor.ListStore.new.html) used to create a new list store are labeled "deprecated: 4.10". I have used GListStore from [Gio](https://docs.gtk.org/gio/index.html) in this calendar project creating a new GListStore with [g_list_store_new](https://docs.gtk.org/gio/ctor.ListStore.new.html).
 
@@ -260,8 +260,7 @@ The [gtk_dialog_new_with_buttons()](https://docs.gtk.org/gtk4/ctor.Dialog.new_wi
 
 I have have been going through the calendar code line-by-line removing  class functions that are on the Gtk4.10 depreciation hit list. This has  has meant that some features have had to be temporarily removed.
 
-GTK developers are planning the [Gtk5](https://www.phoronix.com/news/GTK5-Likely-After-GTK-4.12) toolkit discussing making it a Wayland only [release](https://www.phoronix.com/news/GTK5-Might-Drop-X11).Gtk 4.10 has been released and can be downloaded [here](https://download.gnome.org/sources/gtk/).
-
+GTK developers are planning the [Gtk5](https://www.phoronix.com/news/GTK5-Likely-After-GTK-4.12) toolkit discussing making it a Wayland only [release](https://www.phoronix.com/news/GTK5-Might-Drop-X11).
 
 ## My Gtk3 to Gtk4 Migration Notes
 
