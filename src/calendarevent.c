@@ -226,7 +226,7 @@ static void calendar_event_set_property(GObject *object,
 
 static void calendar_event_class_init (CalendarEventClass *klass)
 {
-    //class constructor static means not availabe outside this class
+    //make class constructor static meaning not available outside this class
 
     GObjectClass *object_class =G_OBJECT_CLASS(klass);
 
@@ -381,7 +381,7 @@ static void calendar_event_class_init (CalendarEventClass *klass)
 
 static void calendar_event_init (CalendarEvent *self)
 {
-  //self->summary =g_strdup("dummy"); //glib function to duplicate a string
+  
 }
 
 

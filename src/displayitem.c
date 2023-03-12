@@ -26,7 +26,7 @@ struct _DisplayItem
     int starttime;  //for sorting
 };
 
-//G_DEFINE_TYPE (DisplayItem, display_item, G_TYPE_OBJECT);
+
 G_DEFINE_TYPE (DisplayItem, display_item, G_TYPE_OBJECT)
 
 enum
@@ -73,7 +73,7 @@ static void display_item_class_init (DisplayItemClass *class)
 
 static void display_item_init (DisplayItem *self)
 {
-
+  
 }
 
 static void display_item_get_property (GObject *object, guint property_id, GValue *value, GParamSpec *pspec){

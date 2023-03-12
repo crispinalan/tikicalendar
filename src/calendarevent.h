@@ -90,9 +90,6 @@ gint calendar_event_get_reminder_min(CalendarEvent *self);
 void calendar_event_set_reminder_min(CalendarEvent *self, gint reminder_mins);
 
 
-
-
-
 G_END_DECLS
 
 #endif //CALENDAREVENT_H
