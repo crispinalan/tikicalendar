@@ -2491,7 +2491,7 @@ static void callbk_home(GSimpleAction * action, GVariant *parameter, gpointer us
 
 	update_label_date(CUSTOM_CALENDAR(calendar), label_date);
 	set_marks_on_calendar(CUSTOM_CALENDAR(calendar));	
-	//custom_calendar_update(CUSTOM_CALENDAR(calendar));
+	custom_calendar_update(CUSTOM_CALENDAR(calendar));
 	display_events(m_start_year, m_start_month, m_start_day);
 
 

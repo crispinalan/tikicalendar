@@ -39,7 +39,7 @@ The database called "events.csv" is located in the working directory. With Tiki 
 ### Adding New Event
 
 * Select event date using the calendar
-* Click the New button on the headerbar to invoke the "New Event" dialog
+* Click the New button on the header bar to invoke the "New Event" window
 * Enter the event summary
 * Enter the location
 * Enter start and end times
@@ -51,14 +51,14 @@ The database called "events.csv" is located in the working directory. With Tiki 
 
 ### Editing Existing Event
 
-* Select the event in the list view and click the Edit button on the headerbar to edit
+* Select the event in the list view and click the Edit button on the header bar to edit
 * Change details as appropriate
 
 ![](tiki-v027-edit-event.png)
 
 ### Preferences
 
-* Use the Preferences dialog in the hamburger menu to change  options
+* Use the Preferences window in the hamburger menu to change  options
 
 ![](tiki-v027-preferences.png)
 
@@ -85,7 +85,7 @@ apt install espeak
 ```
 
 
-With Fedora use the following commands
+With Fedora use the following commands.
 
 ```
 su
@@ -98,7 +98,7 @@ dnf install espeak
 * Press the spacebar to read out the event(s) for the selected date
 * Enable "Talk At Startup" in the preferences window to read out date and event details when the calendar is started
 
-The use of espeak replaces the previous date reader code which was based on concatenating pre-recorded wav files. Although I added some speech tag words this approach was limited in scope but had the advantage that no external library was needed.
+The use of espeak replaces the previous date reader code which was based on concatenating pre-recorded wav files. Although I added some speech tag words, this approach was limited in scope but had the advantage that no external library was needed.
 
 Use the information menu item to check if espeak is installed on your system.
 
@@ -124,7 +124,7 @@ Today           Home Key
 
 Add Tiki Calendar to your start-up programs to read out the date and any event details when the computer is switched on.
 
-With the GNOME desktop use the GNOME "Tweak Tool" to add Tiki Calendar to your startup applications if required.
+With Gtk (GNOME) based desktops use the GNOME "Tweak Tool" to add Tiki Calendar to your startup applications if required.
 
 ## Known Issues
 
@@ -132,7 +132,7 @@ With the GNOME desktop use the GNOME "Tweak Tool" to add Tiki Calendar to your s
 
 ~~The css context style and provider classes which were used to colour days with events on the previous button grid calendar are being depreciated in Gtk4.10 (see notes and comments below). Consequently, I have replaced bespoke button grid calendar with the [gk4 calendar widget](https://docs.gtk.org/gtk4/class.Calendar.html) which is styled using the Linux (GNOME) system css theme. This calendar uses gtk_calendar_mark_day() to place a visual marker on a particular day and gtk_calendar_unmark_day() to remove the marker. However, visual markers are not visible on the GNOME desktops (Debian, Fedora)  that I have used for testing Tiki Calendar.~~ 
 
-Tiki Calendar v0.27 has re-introduced the bespoke custom grid calendar (replacing the Calendar shipped with Gtk4) which has now been rewritten as a gobject class using a grid of labels rather than buttons. The custom calendar uses the [gtk_widget_add_css_class](https://docs.gtk.org/gtk4/method.Widget.add_css_class.html) and Pango. All code using the functions gtk_widget_get_style_context, gtk_style_context_add_provider and gtk_color_chooser_get_rgba has been removed since these functions are being depreciated in Gtk4.10. This custom calendar allows dates with events to be marked with a "*". New features will be added as the project moves along.
+Tiki Calendar v0.27 has re-introduced the bespoke custom calendar replacing the Calendar shipped with Gtk4.  This custom calendar has been rewritten as a GtkWidget and uses a grid of labels to display month days rather than a grid of day buttons. It uses [gtk_widget_add_css_class](https://docs.gtk.org/gtk4/method.Widget.add_css_class.html) and Pango. All code using the functions gtk_widget_get_style_context, gtk_style_context_add_provider and gtk_color_chooser_get_rgba has been removed since these functions are being depreciated in Gtk4.10. This custom calendar allows dates with events to be marked with a star (*). New features will be added as the project moves along.
 
 I have kept the "Speak Month" feature which reads out month days with events. To use this either press the "M" key (M for month markers) or use the menu item called "Speak Month".
 
@@ -194,7 +194,7 @@ make
 ```
 ## Themes
 
-The Tiki Calendar version 0.2 series is now themed using the Gtk application theme.  Some examples of how Tiki Calendar looks with  system themes are shown below.
+The Tiki Calendar version 0.2 series is now themed using the GNOME (Gtk) application theme.  Some examples of how Tiki Calendar looks with some system themes are shown below.
 
 ### Adwaita Dark
 
@@ -223,7 +223,7 @@ This is a hobby project under development to learn Gtk programming.
 
 The first iteration of the Tiki Calendar project used Gtk3 but then migrated to the Gtk4 toolkit. The Gtk3 project was forked and so can be found elsewhere on github. This Gtk4 version of Tiki Calendar uses a csv file to store events (rather than sqlite). The events storage file is called "events.csv" and should be located in the current working directory.
 
-One of the reasons why I started to investigate using Gtk was that I was concerned with the Qt [licensing changes](https://www.qt.io/blog/qt-offering-changes-2020) relating to LTS versions and how this would impact my [Talk Calendar](https://github.com/crispinalan/talkcalendar) project in the longer term. Qt is [dual-licensed](https://www.qt.io/licensing/) under commercial and open source licenses.
+One of the reasons why I started this Gtk calendar project was because of the Qt [licensing changes](https://www.qt.io/blog/qt-offering-changes-2020) relating to Qt LTS versions and how these changes would impact my Qt [Talk Calendar](https://github.com/crispinalan/talkcalendar) project in the longer term. Qt is [dual-licensed](https://www.qt.io/licensing/) under commercial and open source licenses.
 
 To avoid any confusion with my Qt5 calendar project I have called this Gtk4 version Tiki Calendar. Tiki is an acronym for Tightly Integrated Knowledge Infrastructure. The Tiki Calendar v0.2x series introduced speech capability using the Flite (and now espeak) speech synthesizer. Gtk4 uses one license the [GNU Lesser General Public License version 2.1](https://www.gnu.org/licenses/old-licenses/lgpl-2.1.html).
 
@@ -283,7 +283,7 @@ These (older) notes may be of help if your are migrating a C Gtk3 project to Gtk
 
 Gtk4 uses [list widgets](https://docs.gtk.org/gtk4/migrating-3to4.html#consider-porting-to-the-new-list-widgets) such as GtkListBox and porting the Gtk3 version of this Calendar project has involved replacing the display of events with a GtkListBox. A significant effort had to be invested into this aspect of the porting. There is an article on scalable lists in gtk4 [here](https://blog.gtk.org/2020/06/07/scalable-lists-in-gtk-4/).
 
-Gtk have said [publically](https://www.youtube.com/watch?v=qjF-VotgfeY&t=824s) that it is their intention to eventually replace GtkTreeView and GtkComboBox with [list widgets](https://blog.gtk.org/2020/06/08/more-on-lists-in-gtk-4/). The GtkListBox widget provides a vertical list and can be sorted (in this application events are sorted by start time and then displayed). The application work flow has had to be changed as headerbar buttons are now used to create a new event, edit and delete a selected event in the list. I have used buttons with text labels (New, Edit, Delete).
+Gtk have said [publically](https://www.youtube.com/watch?v=qjF-VotgfeY&t=824s) that it is their intention to eventually replace GtkTreeView and GtkComboBox with [list widgets](https://blog.gtk.org/2020/06/08/more-on-lists-in-gtk-4/). The GtkListBox widget provides a vertical list which can be sorted (in this application events are sorted by start time and then displayed). The application work flow had to be changed as header bar buttons are now used to create a new event, edit and delete a selected event in the list. I have used buttons with text labels (New, Edit, Delete).
 
 In Gtk4.0, the function
 
@@ -301,7 +301,7 @@ gtk_dialog_run()
 
 has been depreciated. This has been less of an issue as callback functions have been used. See this [discussion](https://discourse.gnome.org/t/how-should-i-replace-a-gtk-dialog-run-in-gtk-4/3501).
 
-I could not place a visual marker on a particular GtkCalendar day using the "gtk_calendar_mark_day()" function. The [GtkInspector](https://wiki.gnome.org/action/show/Projects/GTK/Inspector?action=show&redirect=Projects%2FGTK%2B%2FInspector) debugging tool does not reveal any obvious CSS style theme option that should to be used to do this. To do this I compiled an example calendar app and pressed Ctrl+Shift+I. At the time I was using Fedora 35/36 GNOME version. With no success, I have ended up writing a bespoke month calendar using the Gtk4 grid layout [manager](https://docs.gtk.org/gtk4/class.Grid.html) which arranges child widgets in rows and columns. I used the layout manager arrange 31 buttons in a grid to create a month calendar. Again a significant effort has had to be invested in this aspect of the porting. I thought that I would be able to use css styling to colour mark calendar day buttons having an event but the css context functions that I used are now being depreciated in Gtk4.10 (see above). I also experienced some other issues with using a grid of buttons with a single call back which I can only describe as shuddering. I have no idea what the cause of this was but I have now written my own gobject custom calendar which uses a grid of labels. 
+I could not place a visual marker on a particular GtkCalendar day using the "gtk_calendar_mark_day()" function. The [GtkInspector](https://wiki.gnome.org/action/show/Projects/GTK/Inspector?action=show&redirect=Projects%2FGTK%2B%2FInspector) debugging tool does not reveal any obvious CSS style theme option that should to be used to do this. To check this I compiled an example calendar app and pressed Ctrl+Shift+I. At the time I was using Fedora 35/36 GNOME version. With no success, I have ended up writing a bespoke month calendar using the Gtk4 grid layout [manager](https://docs.gtk.org/gtk4/class.Grid.html) which arranges child widgets in rows and columns. I used the layout manager arrange 31 buttons in a grid to create a month calendar. Again a significant effort has had to be invested in this aspect of the porting. I thought that I would be able to use css styling to colour mark calendar day buttons having an event but the css context functions that I used are now being depreciated in Gtk4.10 (see above). I also experienced some other issues with using a grid of buttons (with a single call back) which I can only describe as shuddering. I have no idea what the cause of this was but I have now written my own GtkWidget custom calendar which uses a grid of labels. 
 
 The function "gtk_spin_button_set_text()" has gone in Gtk4. The documented approach for showing spin button [leading zeros](https://people.gnome.org/~ebassi/docs/_build/Gtk/4.0/signal.SpinButton.output.html) I could not get to work. The spin boxes for the start and end times now accept floating point values. I have also removed the priority combobox as comboboxes are on the Gtk4 depreciation hit list (see list widget discussion above) and replaced it with a single high priority check button. It now turns out that dialogs are being depreciated in Gtk4.10. See the Gtk4 depreciations discussion above.
 
@@ -324,7 +324,9 @@ gnome-shell-extensions package to get the GNOME classic desktop using the comman
 sudo apt update
 sudo apt install gnome-shell-extensions
 ```
-You select GNOME classic on log-in which gives the good old traditional Ubuntu desktop experience which can be enhanced with extensions such as Arc menu.
+You select GNOME classic on log-in which provides the  traditional Ubuntu desktop experience which can be enhanced with extensions such as Arc menu.
+
+![](gnome-classic-ubuntu.png)
 
 With Debian the GNOME classic desktop is installed by default and is selected on log-in.
 
